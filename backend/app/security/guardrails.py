@@ -1,0 +1,85 @@
+import re
+from time import perf_counter
+
+from app.security.runtime import Decision, GuardrailResult, Risk, latency_ms
+
+_SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+_EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+_CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")
+_INJECTION_PATTERNS = (
+    re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions", re.IGNORECASE),
+    re.compile(r"reveal\s+(the\s+)?(system|developer)\s+prompt", re.IGNORECASE),
+    re.compile(r"you\s+are\s+now\s+(dan|developer|system)", re.IGNORECASE),
+    re.compile(r"disregard\s+(all\s+)?(previous|prior|above)\s+instructions", re.IGNORECASE),
+)
+
+
+def redact_pii(text: str) -> str:
+    redacted = _SSN_RE.sub("[REDACTED_SSN]", text)
+    redacted = _EMAIL_RE.sub("[REDACTED_EMAIL]", redacted)
+    return _CREDIT_CARD_RE.sub("[REDACTED_PAYMENT_CARD]", redacted)
+
+
+class PromptInjectionDetector:
+    guardrail = "prompt_injection"
+
+    async def evaluate(self, text: str) -> GuardrailResult:
+        started_at = perf_counter()
+        normalized = " ".join(text.split())
+        for pattern in _INJECTION_PATTERNS:
+            if pattern.search(normalized):
+                return GuardrailResult(
+                    decision=Decision.BLOCK,
+                    risk=Risk.CRITICAL,
+                    confidence=0.93,
+                    reason=(
+                        "Instruction hierarchy override or system prompt extraction attempt "
+                        "detected."
+                    ),
+                    guardrail=self.guardrail,
+                    latency_ms=latency_ms(started_at),
+                )
+
+        risk = Risk.MEDIUM if "system prompt" in normalized.lower() else Risk.LOW
+        decision = Decision.WARN if risk == Risk.MEDIUM else Decision.ALLOW
+        return GuardrailResult(
+            decision=decision,
+            risk=risk,
+            confidence=0.62 if decision == Decision.WARN else 0.82,
+            reason="No direct prompt injection pattern detected.",
+            guardrail=self.guardrail,
+            latency_ms=latency_ms(started_at),
+        )
+
+
+class PIIDetector:
+    guardrail = "pii"
+
+    async def evaluate(self, text: str) -> GuardrailResult:
+        started_at = perf_counter()
+        if _SSN_RE.search(text) or _CREDIT_CARD_RE.search(text):
+            return GuardrailResult(
+                decision=Decision.SANITIZE,
+                risk=Risk.HIGH,
+                confidence=0.96,
+                reason="Sensitive personal or payment data detected.",
+                guardrail=self.guardrail,
+                latency_ms=latency_ms(started_at),
+            )
+        if _EMAIL_RE.search(text):
+            return GuardrailResult(
+                decision=Decision.SANITIZE,
+                risk=Risk.MEDIUM,
+                confidence=0.9,
+                reason="Email address detected.",
+                guardrail=self.guardrail,
+                latency_ms=latency_ms(started_at),
+            )
+        return GuardrailResult(
+            decision=Decision.ALLOW,
+            risk=Risk.LOW,
+            confidence=0.85,
+            reason="No PII pattern detected.",
+            guardrail=self.guardrail,
+            latency_ms=latency_ms(started_at),
+        )
