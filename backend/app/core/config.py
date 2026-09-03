@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     environment: str = "local"
     database_url: str = "sqlite+aiosqlite:///./aegisai.db"
     redis_url: str = "redis://localhost:6379/0"
+    auto_create_schema: bool = True
     rate_limit_requests: int = 100
     rate_limit_window_seconds: int = 60
     api_keys: dict[str, str] = Field(
