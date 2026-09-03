@@ -37,6 +37,9 @@ class CampaignStore:
         campaigns = self._campaigns.get(tenant_id, [])
         return [finding for campaign in campaigns for finding in campaign.findings]
 
+    def clear(self) -> None:
+        self._campaigns.clear()
+
 
 campaign_store = CampaignStore()
 
@@ -66,22 +69,23 @@ class CampaignRunner:
             attack_count=request.attack_count,
             mutation_depth=request.mutation_depth,
         )
+        campaign_id = new_campaign_id()
         attack_results: list[CampaignAttackResult] = []
         evaluations = []
         findings = []
 
         for variant in variants:
+            # Each attack is its own conversation so multi-turn state from one attack
+            # cannot block the next and mask an unrelated defense's behavior.
+            chat_request = SupportChatRequest(
+                message=variant.payload,
+                application_id=identity.application_id,
+                conversation_id=f"{campaign_id}:{variant.attack_id}",
+            )
             if request.defense_mode == DefenseMode.NO_DEFENSE:
-                runtime_response = await self.agent.run_without_defenses(
-                    SupportChatRequest(message=variant.payload, application_id=identity.application_id),
-                    identity,
-                )
+                runtime_response = await self.agent.run_without_defenses(chat_request, identity)
             else:
-                runtime_response = await self.agent.run(
-                    SupportChatRequest(message=variant.payload, application_id=identity.application_id),
-                    identity,
-                    session,
-                )
+                runtime_response = await self.agent.run(chat_request, identity, session)
             evaluation = self.evaluator.evaluate(variant, runtime_response)
             evaluations.append(evaluation)
             if evaluation.finding is not None:
@@ -98,7 +102,7 @@ class CampaignRunner:
         completed_at = datetime.now(timezone.utc)
         response = CampaignRunResponse(
             campaign=CampaignSummary(
-                campaign_id=new_campaign_id(),
+                campaign_id=campaign_id,
                 tenant_id=identity.tenant_id,
                 application_id=identity.application_id,
                 name=request.name,

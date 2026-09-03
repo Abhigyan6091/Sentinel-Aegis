@@ -49,7 +49,10 @@ def test_runtime_records_telemetry_spans_and_events(monkeypatch, tmp_path):
 
     assert response.status_code == 200
     assert any(span.name == "support.chat" for span in telemetry.spans)
-    assert any(event.event_type == "security.prompt_injection_detected" for event in event_bus.events)
+    assert any(
+        event.event_type == "security.prompt_injection_detected"
+        for event in event_bus.events
+    )
 
 
 def test_grafana_dashboard_is_provisioned():

@@ -17,10 +17,11 @@ from app.schemas.support import (
 )
 from app.security.context_firewall import ContextFirewall
 from app.security.guardrails import (
-    MultiTurnPromptInjectionDetector,
+    ConversationMemory,
     PIIDetector,
     PromptInjectionDetector,
     SecretDetector,
+    get_conversation_memory,
     redact_pii,
     redact_secrets,
 )
@@ -42,13 +43,14 @@ class SupportAgent:
         retriever: LocalSupportRetriever | None = None,
         policy: PolicyEngine | None = None,
         tools: MockSupportTools | None = None,
+        conversation_memory: ConversationMemory | None = None,
     ) -> None:
         self.provider = provider or create_llm_provider()
         self.retriever = retriever
         self.policy = policy
         self.tools = tools or MockSupportTools()
         self.prompt_detector = PromptInjectionDetector()
-        self.multi_turn_detector = MultiTurnPromptInjectionDetector()
+        self.conversation_memory = conversation_memory or get_conversation_memory()
         self.pii_detector = PIIDetector()
         self.secret_detector = SecretDetector()
         self.context_firewall = ContextFirewall()
@@ -74,9 +76,13 @@ class SupportAgent:
         session: AsyncSession | None = None,
     ) -> SupportChatResponse:
         trace = [TraceStep(component="gateway", decision="ALLOW", reason="Authenticated request.")]
+        multi_turn_detector = self.conversation_memory.detector(
+            identity.tenant_id,
+            payload.conversation_id or identity.request_id,
+        )
         guardrails = [
             await self.prompt_detector.evaluate(payload.message),
-            await self.multi_turn_detector.evaluate(payload.message),
+            await multi_turn_detector.evaluate(payload.message),
             await self.pii_detector.evaluate(payload.message),
             await self.secret_detector.evaluate(payload.message),
         ]
@@ -122,7 +128,10 @@ class SupportAgent:
                 TraceStep(
                     component="input_guardrail",
                     decision="SANITIZE",
-                    reason="Sensitive input values redacted before retrieval and provider execution.",
+                    reason=(
+                        "Sensitive input values redacted before retrieval and "
+                        "provider execution."
+                    ),
                 )
             )
 

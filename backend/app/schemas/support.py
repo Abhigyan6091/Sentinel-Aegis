@@ -8,6 +8,7 @@ from app.security.runtime import Decision, GuardrailResult
 class SupportChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     application_id: str | None = None
+    conversation_id: str | None = None
 
 
 class ToolCallAudit(BaseModel):

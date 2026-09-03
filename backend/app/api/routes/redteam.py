@@ -8,7 +8,12 @@ from app.core.security import get_current_identity
 from app.db.session import get_session
 from app.redteam.attacks import AttackGenerator, AttackSeed
 from app.redteam.runner import BenchmarkRunner, CampaignRunner, campaign_store
-from app.schemas.redteam import BenchmarkCreate, BenchmarkResponse, CampaignCreate, CampaignRunResponse
+from app.schemas.redteam import (
+    BenchmarkCreate,
+    BenchmarkResponse,
+    CampaignCreate,
+    CampaignRunResponse,
+)
 
 router = APIRouter(prefix="/red-team", tags=["red-team"])
 CurrentIdentity = Annotated[RequestIdentity, Depends(get_current_identity)]

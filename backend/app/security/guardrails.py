@@ -1,4 +1,5 @@
 import re
+from collections import OrderedDict
 from time import perf_counter
 
 from app.security.runtime import Decision, GuardrailResult, Risk, latency_ms
@@ -118,7 +119,10 @@ class SecretDetector:
 
 
 class MultiTurnPromptInjectionDetector:
+    """Tracks one conversation so overrides split across turns are still detected."""
+
     guardrail = "multi_turn_prompt_injection"
+    history_window = 4
 
     def __init__(self) -> None:
         self.history: list[str] = []
@@ -127,7 +131,7 @@ class MultiTurnPromptInjectionDetector:
         started_at = perf_counter()
         normalized = " ".join([*self.history, text]).lower()
         self.history.append(text)
-        self.history = self.history[-4:]
+        self.history = self.history[-self.history_window :]
         has_fragmented_override = (
             "ignore" in normalized
             and "previous instructions" in normalized
@@ -150,3 +154,35 @@ class MultiTurnPromptInjectionDetector:
             guardrail=self.guardrail,
             latency_ms=latency_ms(started_at),
         )
+
+
+class ConversationMemory:
+    """Holds multi-turn detector state per conversation, scoped by tenant.
+
+    Turns from different tenants, chat sessions, or red-team attacks must never share
+    history: one tenant's earlier turn would otherwise block another's unrelated request.
+    """
+
+    def __init__(self, max_conversations: int = 512) -> None:
+        self._detectors: OrderedDict[
+            tuple[str, str], MultiTurnPromptInjectionDetector
+        ] = OrderedDict()
+        self._max_conversations = max_conversations
+
+    def detector(self, tenant_id: str, conversation_id: str) -> MultiTurnPromptInjectionDetector:
+        key = (tenant_id, conversation_id)
+        detector = self._detectors.pop(key, None) or MultiTurnPromptInjectionDetector()
+        self._detectors[key] = detector
+        while len(self._detectors) > self._max_conversations:
+            self._detectors.popitem(last=False)
+        return detector
+
+    def clear(self) -> None:
+        self._detectors.clear()
+
+
+_conversation_memory = ConversationMemory()
+
+
+def get_conversation_memory() -> ConversationMemory:
+    return _conversation_memory
