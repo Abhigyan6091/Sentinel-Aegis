@@ -4,6 +4,8 @@ Date: 2026-09-03
 
 The reduced 5-phase MVP is complete. The next work turns Sentinel Aegis from a strong local portfolio MVP into a production-grade AI application security platform.
 
+All eight phases now have their core scope implemented. Each phase records the expansion work that remains beyond its core.
+
 ## Phase P1: Production Identity And Tenant Isolation
 
 Goal: replace development-only auth with production identity boundaries.
@@ -129,6 +131,8 @@ Exit criteria:
 
 Goal: turn findings into repeatable tests and reviewable work items.
 
+Status: complete. Security-gate and campaign findings convert into committed JSON regression fixtures; a regression-suite runner and CLI replay them separately from exploratory campaigns; campaign, gate, and regression reports are stored and published as artifacts; findings persist with evidence, reproduction steps, and remediation and move through the full lifecycle with enforced transitions; campaign reports export to JSON and Markdown and re-import from JSON. Automatic fixture pruning for retired attacks and a finding-triage UI with inline status editing remain future P7 expansion work.
+
 - Convert security-gate findings into durable regression fixtures.
 - Add a regression-suite runner separate from exploratory campaigns.
 - Store campaign reports and gate reports as artifacts.
@@ -145,6 +149,8 @@ Exit criteria:
 ## Phase P8: Deployment And Production Hardening
 
 Goal: prepare a deployable, secure production service.
+
+Status: complete. Kubernetes manifests deploy a non-root, read-only backend with migration init container, network policy, and disruption budget; a secret-reference resolver reads from files, environment, or AWS Secrets Manager; security headers, CORS control, request-size limits, and structured error envelopes are enforced on every response; a production preflight refuses unsafe configuration at boot; backup/restore guidance and a migration smoke test are documented and automated; CI blocks on dependency, static-analysis, container, and secret scanning; deployment and incident-response runbooks are published. Terraform modules, an OPA admission policy, and multi-region failover remain future P8 expansion work.
 
 - Add Kubernetes manifests or Terraform-backed deployment docs.
 - Add secrets-manager integration.

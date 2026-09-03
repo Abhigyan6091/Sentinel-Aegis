@@ -6,8 +6,15 @@ services:
       AEGIS_DATABASE_URL: postgresql+asyncpg://aegis:aegis@postgres:5432/aegisai
       AEGIS_REDIS_URL: redis://redis:6379/0
       AEGIS_AUTO_CREATE_SCHEMA: "false"
+      AEGIS_CORS_ALLOW_ORIGINS: '["http://localhost:3000"]'
+      AEGIS_MAX_REQUEST_BYTES: "1000000"
     ports:
       - "8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       postgres:
         condition: service_healthy

@@ -73,3 +73,18 @@ def test_finding_lifecycle_migration_is_reversible(monkeypatch, tmp_path):
 
     assert "regression_case_id" not in columns
     assert "status" in columns
+
+
+def test_migration_smoke_test_survives_a_full_downgrade_and_rebuild(monkeypatch, tmp_path):
+    """Phase P8: a migration you cannot reverse is a deploy you cannot roll back."""
+    from app.cli.migration_check import run_smoke_test
+
+    database_path = tmp_path / "smoke.db"
+    monkeypatch.setenv("AEGIS_DATABASE_URL", f"sqlite+aiosqlite:///{database_path}")
+    get_settings.cache_clear()
+
+    assert run_smoke_test("alembic.ini", "base", verbose=False) == 0
+
+    engine = create_engine(f"sqlite:///{database_path}")
+    tables = set(inspect(engine).get_table_names())
+    assert {"findings", "policies", "rag_chunks", "approval_requests"} <= tables

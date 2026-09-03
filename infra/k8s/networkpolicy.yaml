@@ -1,0 +1,48 @@
+# Default-deny ingress: only the ingress controller may reach the API, and the API may
+# only reach its own datastores plus DNS and HTTPS (identity provider, LLM providers).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sentinel-aegis-backend
+  namespace: sentinel-aegis
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel-aegis
+      app.kubernetes.io/component: backend
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: qdrant
+      ports:
+        - protocol: TCP
+          port: 6333
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 443

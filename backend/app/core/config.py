@@ -39,6 +39,21 @@ class Settings(BaseSettings):
     event_bus: str = "memory"
     regression_fixtures_dir: str = "./regression/cases"
     report_artifacts_dir: str = "./artifacts"
+    cors_allow_origins: list[str] = Field(default_factory=list)
+    cors_allow_credentials: bool = False
+    cors_allow_methods: list[str] = Field(
+        default_factory=lambda: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
+    )
+    cors_allow_headers: list[str] = Field(
+        default_factory=lambda: ["authorization", "content-type", "x-api-key", "x-request-id"]
+    )
+    max_request_bytes: int = 1_000_000
+    hsts_max_age_seconds: int = 31_536_000
+    security_headers_enabled: bool = True
+    secrets_provider: str = "env"
+    secrets_file_dir: str = "/run/secrets"
+    aws_secrets_region: str | None = None
+    aws_secrets_prefix: str = "sentinel-aegis/"
     redpanda_bootstrap_servers: str = "redpanda:9092"
     security_events_topic: str = "sentinel-aegis.security-events"
     api_keys: dict[str, str] = Field(
@@ -49,6 +64,10 @@ class Settings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(env_prefix="AEGIS_", env_file=".env", extra="ignore")
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.lower() in {"production", "prod"}
 
 
 @lru_cache

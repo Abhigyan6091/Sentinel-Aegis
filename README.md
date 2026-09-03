@@ -94,6 +94,18 @@ Milestone 4 records support responses, campaign attack results, evaluation runs,
 - `POST /api/v1/red-team/benchmarks`: compare multiple defense modes against the same attack set.
 - `GET /api/v1/red-team/campaigns/latest`: latest tenant-scoped campaign result.
 - `GET /api/v1/red-team/findings`: findings created from observed successful attacks.
+- `GET /api/v1/findings`: durable, tenant-scoped findings with lifecycle status.
+- `GET /api/v1/findings/{finding_id}`: one finding with evidence and reproduction steps.
+- `PATCH /api/v1/findings/{finding_id}`: move a finding through its lifecycle and record remediation.
+- `POST /api/v1/findings/{finding_id}/regression-case`: promote a finding to a committed regression fixture.
+- `GET /api/v1/regression/cases`: list committed regression cases.
+- `POST /api/v1/regression/cases`: author a regression case directly.
+- `DELETE /api/v1/regression/cases/{case_id}`: remove a regression case.
+- `POST /api/v1/regression/runs`: replay the regression suite and store a report artifact.
+- `GET /api/v1/reports/campaigns/{campaign_id}`: export a campaign report as JSON or Markdown.
+- `POST /api/v1/reports/import`: rebuild a campaign from an exported JSON report.
+- `GET /api/v1/reports/artifacts`: list stored report artifacts.
+- `GET /api/v1/reports/artifacts/{name}`: read one stored report artifact.
 - `POST /api/v1/rag/documents`: ingest a tenant-scoped RAG document.
 - `POST /api/v1/rag/search`: run tenant-scoped vector retrieval.
 - `GET /api/v1/policies`: list tenant-scoped policy versions.
@@ -285,6 +297,61 @@ python -m app.cli.security_gate --min-score 100 --max-attack-success-rate 0 --ma
 
 Add `--report-path ../security-gate-report.md` to write a Markdown report with threshold results and regression cases for findings. The GitHub Actions backend job runs the same gate after tests and uploads the report as an artifact. The default gate does not require Docker, Postgres, Redis, Qdrant, external LLM providers, or API keys.
 
+Add `--campaign-report-path ../campaign-report.json` to store the full campaign report, and `--write-regression-fixtures regression/cases` to convert every finding into a committed regression fixture.
+
+## Regression Suite
+
+Campaigns explore a generated attack space and are expected to surface new findings. The regression suite is the opposite: it replays a fixed set of committed fixtures and must stay green.
+
+```bash
+cd backend
+python -m app.cli.regression_suite                        # layered defenses: all cases pass
+python -m app.cli.regression_suite --defense-mode no_defense   # all cases fail
+```
+
+Fixtures live in `backend/regression/cases` as one JSON file per case, holding the exact payload, the expected mitigation, the evidence observed when the attack succeeded, and reproduction steps. Regenerate them from an undefended discovery run:
+
+```bash
+cd backend
+python -m scripts.seed_regression_fixtures
+```
+
+A finding becomes a regression test in one call:
+
+```bash
+curl -X POST -H "x-api-key: dev-aegis-key" -H "content-type: application/json" \
+  localhost:8000/api/v1/findings/<finding_id>/regression-case -d '{}'
+```
+
+The promoted case fails against an undefended runtime and passes once the mitigation holds, so the fix is proven rather than asserted.
+
+## Finding Lifecycle
+
+Findings persist with severity, impact, root cause, evidence, reproduction steps, and remediation, and move through `open` → `triaged` → `fixed` → `closed`, with `accepted_risk` for a documented decision to carry the risk. Invalid transitions are rejected with `409`, and any resolved finding can reopen when a regression run proves the attack works again. Every read and write is tenant scoped.
+
+## Production Hardening
+
+Every response carries `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, a locked-down `Content-Security-Policy`, `Permissions-Policy`, and `Cache-Control: no-store`; HSTS is added only in production, where TLS is present. Request bodies above `AEGIS_MAX_REQUEST_BYTES` are refused with `413` before they are parsed. CORS is disabled unless origins are configured explicitly.
+
+Errors leave as one structured envelope and never expose internals:
+
+```json
+{"error": {"code": "unauthenticated", "message": "Missing API credentials", "request_id": "req-..."}}
+```
+
+The same `request_id` is echoed in the `x-request-id` header, so a client-reported failure maps directly to a log line and a trace.
+
+When `AEGIS_ENVIRONMENT=production`, the service refuses to boot with an unsafe configuration — development API keys enabled, non-JWT auth, missing JWKS, wildcard CORS, automatic schema creation, or SQLite — and prints every problem at once. Interactive API docs are disabled in production.
+
+Secrets are never stored in configuration. Any secret-bearing setting accepts a reference resolved once at startup:
+
+```
+AEGIS_ANTHROPIC_API_KEY=secret://file/anthropic_api_key   # mounted file
+AEGIS_DATABASE_URL=secret://aws/database#url              # AWS Secrets Manager
+```
+
+See `docs/deployment.md` for the deployment guide and `docs/runbook.md` for deploy, rollback, backup, and incident-triage procedures.
+
 ## Backend Development
 
 Docker and CI use Python 3.12. This machine currently has Python 3.10, and the backend tests still run locally with compatible dependencies.
@@ -312,6 +379,17 @@ The first Alembic migration creates the core tables:
 
 `users`, `tenants`, `applications`, `projects`, `policies`, `guardrails`, `attack_campaigns`, `attacks`, `attack_variants`, `attack_results`, `findings`, `traces`, `tool_calls`, `security_events`, and `evaluation_runs`.
 
+Later migrations add RAG documents and chunks, policy versioning and the approval queue, and finding lifecycle columns (campaign, impact, root cause, evidence, reproduction steps, remediation, regression case, and resolution).
+
+Before promoting a release, prove the schema can be built, reverted, and rebuilt:
+
+```bash
+cd backend
+python -m app.cli.migration_check
+```
+
+A migration that cannot be reversed is a deploy that cannot be rolled back. CI runs this on every change.
+
 Application code uses migrations in Docker. Local tests use isolated SQLite databases with automatic schema creation for speed.
 
 ## Testing
@@ -330,7 +408,15 @@ Current tests cover:
 - Red-team attack catalog, campaign execution, findings, and scoring.
 - Secret detection, multi-turn prompt-injection detection, benchmark mode comparison, and dashboard provisioning.
 - Observability summary/traces, tenant scoping, local telemetry spans, security events, Prometheus metrics, and campaign persistence.
-- CI security-gate pass/fail threshold logic and CLI JSON output.
+- CI security-gate pass/fail threshold logic, CLI JSON output, and finding-to-fixture conversion.
+- Finding lifecycle transitions, tenant scoping, status filtering, and regression promotion.
+- Regression fixture storage, path-traversal rejection, suite replay, and the committed fixtures passing defended and failing undefended.
+- Campaign report JSON/Markdown export, JSON round-trip import, cross-tenant import rejection, and artifact storage.
+- Security headers, HSTS scoping, request-size limits, structured error envelopes, CORS behavior, and hidden production docs.
+- Secret reference resolution from env, file, and AWS providers, plus path-traversal and missing-secret failures.
+- Production preflight rejection of unsafe settings.
+- Kubernetes manifest security posture, Dockerfile and compose hardening, CI scanning gates, and operator documentation coverage.
+- Migration upgrade/downgrade round trip.
 
 ## Limitations
 
@@ -339,11 +425,10 @@ Current tests cover:
 - Qdrant-backed retrieval is available through the HTTP vector-store abstraction, but embeddings are deterministic local vectors rather than model-generated embeddings.
 - Grafana dashboard provisioning and local telemetry spans are implemented; full OTLP export and durable Redpanda producer/consumer workers are not implemented yet.
 - Classifier, LLM-judge, and Presidio-backed guardrail modes are validated benchmark modes, but their model-backed implementations are not wired yet.
-- Security-gate reports include regression case templates, but committing generated regression files is still manual.
 - Role claims are enforced by reusable helpers, but full organization membership management UI/API is not implemented yet.
 - Policy CRUD and approval queues are implemented; role management UI and per-application provider selection are not implemented yet.
 - High-risk actions such as refunds are simulated locally.
 
 ## Future Work
 
-Next expansion work should focus on automated regression generation from findings, full OTLP/Redpanda workers, model-backed advanced guardrails, deployment hardening, secrets management, and production runbooks.
+Next expansion work should focus on full OTLP export and durable Redpanda producer/consumer workers, model-backed advanced guardrails (classifier, LLM judge, Presidio PII), per-application provider configuration with durable cost analytics, organization and role management UI, and OPA/Rego policy evaluation.

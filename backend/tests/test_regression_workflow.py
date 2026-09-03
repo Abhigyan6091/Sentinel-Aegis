@@ -135,7 +135,7 @@ def test_invalid_lifecycle_transition_is_rejected(monkeypatch, tmp_path):
     )
 
     assert response.status_code == 409
-    assert "open to fixed" in response.json()["detail"]
+    assert "open to fixed" in response.json()["error"]["message"]
 
 
 def test_findings_can_be_filtered_by_status(monkeypatch, tmp_path):

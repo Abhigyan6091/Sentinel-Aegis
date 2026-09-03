@@ -4,3 +4,8 @@ __pycache__/
 .ruff_cache/
 .venv/
 aegisai.db
+tests/
+scripts/
+artifacts/
+docs/
+.git/

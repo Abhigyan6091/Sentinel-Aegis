@@ -76,7 +76,7 @@ def test_me_rejects_jwt_with_wrong_issuer(monkeypatch):
     response = client.get("/api/v1/me", headers={"authorization": f"Bearer {token}"})
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid JWT credentials"
+    assert response.json()["error"]["message"] == "Invalid JWT credentials"
 
 
 def test_dev_api_keys_can_be_disabled_for_production(monkeypatch):
@@ -86,7 +86,7 @@ def test_dev_api_keys_can_be_disabled_for_production(monkeypatch):
     response = client.get("/api/v1/me", headers={"x-api-key": "dev-aegis-key"})
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Development API keys are disabled"
+    assert response.json()["error"]["message"] == "Development API keys are disabled"
 
 
 def test_jwt_auth_mode_rejects_dev_api_keys_even_when_allowed(monkeypatch):
@@ -99,7 +99,7 @@ def test_jwt_auth_mode_rejects_dev_api_keys_even_when_allowed(monkeypatch):
     response = client.get("/api/v1/me", headers={"x-api-key": "dev-aegis-key"})
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Development API keys are disabled"
+    assert response.json()["error"]["message"] == "Development API keys are disabled"
 
 
 def test_jwt_tenants_are_isolated_on_application_apis(monkeypatch, tmp_path):

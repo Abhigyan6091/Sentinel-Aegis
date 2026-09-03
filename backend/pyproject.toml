@@ -29,13 +29,21 @@ include = ["app*"]
 dev = [
   "pytest>=8.3.2",
   "pytest-asyncio>=0.24.0",
-  "ruff>=0.6.3"
+  "ruff>=0.6.3",
+  "pyyaml>=6.0.2"
+]
+aws = [
+  "boto3>=1.35.0"
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.bandit]
+# Tests intentionally contain attack payloads and hardcoded development credentials.
+exclude_dirs = ["tests", "regression", ".venv"]
 
 [tool.ruff]
 line-length = 100

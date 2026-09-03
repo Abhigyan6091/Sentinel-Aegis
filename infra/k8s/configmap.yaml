@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinel-aegis-config
+  namespace: sentinel-aegis
+data:
+  # Non-secret configuration only. Credentials come from the Secret, or from a
+  # secrets manager via `secret://` references (see docs/deployment.md).
+  AEGIS_APP_NAME: "Sentinel Aegis"
+  AEGIS_ENVIRONMENT: "production"
+  AEGIS_AUTH_MODE: "jwt"
+  AEGIS_ALLOW_DEV_API_KEYS: "false"
+  AEGIS_AUTO_CREATE_SCHEMA: "false"
+  AEGIS_SECURITY_HEADERS_ENABLED: "true"
+  AEGIS_MAX_REQUEST_BYTES: "1000000"
+  AEGIS_CORS_ALLOW_ORIGINS: '["https://console.example.com"]'
+  AEGIS_CORS_ALLOW_CREDENTIALS: "false"
+  AEGIS_JWT_ISSUER: "https://issuer.example.com/"
+  AEGIS_JWT_AUDIENCE: "sentinel-aegis"
+  AEGIS_JWT_JWKS_URL: "https://issuer.example.com/.well-known/jwks.json"
+  AEGIS_JWT_ALGORITHMS: '["RS256"]'
+  AEGIS_LLM_PROVIDER: "anthropic"
+  AEGIS_SUPPORT_RETRIEVER: "rag"
+  AEGIS_RAG_VECTOR_STORE: "qdrant"
+  AEGIS_QDRANT_URL: "http://qdrant:6333"
+  AEGIS_EVENT_BUS: "memory"
+  AEGIS_SECRETS_PROVIDER: "file"
+  AEGIS_SECRETS_FILE_DIR: "/run/secrets"

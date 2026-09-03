@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel-aegis-backend
+  namespace: sentinel-aegis
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: sentinel-aegis
+    app.kubernetes.io/component: backend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

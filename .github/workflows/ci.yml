@@ -22,6 +22,11 @@ jobs:
       - name: Test backend
         working-directory: backend
         run: pytest -q
+      - name: Migration smoke test
+        working-directory: backend
+        env:
+          AEGIS_DATABASE_URL: sqlite+aiosqlite:///./migration-smoke.db
+        run: python -m app.cli.migration_check
       - name: Run regression suite
         working-directory: backend
         run: >
@@ -68,3 +73,59 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scanners
+        run: pip install pip-audit bandit[toml]
+
+      - name: Dependency audit (blocking)
+        working-directory: backend
+        run: pip-audit --strict --progress-spinner off .
+
+      - name: Static analysis (blocking)
+        working-directory: backend
+        run: bandit -r app -c pyproject.toml
+
+      - name: Audit frontend dependencies (blocking)
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+  container-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t sentinel-aegis-backend:ci ./backend
+
+      - name: Scan backend image (blocking)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: sentinel-aegis-backend:ci
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Scan filesystem for secrets and misconfiguration
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret,misconfig
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
