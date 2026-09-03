@@ -94,14 +94,22 @@ async def record_campaign_result(
             campaign.campaign.campaign_id,
             result.evaluation,
         )
-    for finding in campaign.findings:
-        await persist_finding(
-            session,
-            identity,
-            application_id,
-            campaign.campaign.campaign_id,
-            finding,
-        )
+        if result.evaluation.finding is not None:
+            # The payload and observed signals travel with the finding so it can later
+            # be promoted into a replayable regression fixture without the campaign.
+            await persist_finding(
+                session,
+                identity,
+                application_id,
+                campaign.campaign.campaign_id,
+                result.evaluation.finding,
+                evidence={
+                    "payload": result.variant.payload,
+                    "expected_behavior": result.variant.expected_behavior,
+                    "detection_signals": result.evaluation.detection_signals,
+                    "defense_mode": campaign.defense_mode.value,
+                },
+            )
     await session.commit()
 
 
@@ -212,6 +220,7 @@ async def persist_finding(
     application_id: str,
     campaign_id: str,
     finding: FindingCandidate,
+    evidence: dict | None = None,
 ) -> None:
     session.add(
         Finding(
@@ -219,13 +228,18 @@ async def persist_finding(
             tenant_id=identity.tenant_id,
             application_id=application_id,
             attack_id=finding.attack_id,
+            campaign_id=campaign_id,
             severity=finding.severity,
             title=finding.title,
             category=finding.category,
             affected_component=finding.affected_component,
             description=finding.description,
+            impact=finding.impact,
+            root_cause=finding.root_cause,
             recommendation=finding.recommendation,
             status=finding.status.lower(),
+            evidence=evidence or {},
+            reproduction_steps=[],
         )
     )
 

@@ -16,6 +16,12 @@ out/
 dist/
 coverage/
 
+# Generated report artifacts; regression/cases fixtures ARE committed.
+backend/artifacts/
+security-gate-report.md
+regression-report.md
+campaign-report.json
+
 .venv/
 venv/
 

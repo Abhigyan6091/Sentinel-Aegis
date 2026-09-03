@@ -128,17 +128,30 @@ class AttackResult(Base, TimestampMixin, TenantScopedMixin):
 
 class Finding(Base, TimestampMixin, TenantScopedMixin):
     __tablename__ = "findings"
+    __table_args__ = (Index("ix_findings_tenant_status", "tenant_id", "status"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
     application_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("applications.id"))
     attack_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("attacks.id"))
+    campaign_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     severity: Mapped[str] = mapped_column(String(32), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[str] = mapped_column(String(64), nullable=False)
     affected_component: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    impact: Mapped[str | None] = mapped_column(Text, nullable=True)
+    root_cause: Mapped[str | None] = mapped_column(Text, nullable=True)
     recommendation: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="open")
+    evidence: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    reproduction_steps: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    remediation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    regression_case_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    decided_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
 
 class Trace(Base, TimestampMixin, TenantScopedMixin):

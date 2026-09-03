@@ -63,7 +63,7 @@ export type AttackSeed = {
   metadata: Record<string, string>;
 };
 
-export type Finding = {
+export type FindingCandidate = {
   finding_id: string;
   severity: string;
   title: string;
@@ -128,11 +128,80 @@ export type CampaignRunResponse = {
       detection_signals: string[];
       latency_ms: number;
       tokens: Record<string, number>;
-      finding: Finding | null;
+      finding: FindingCandidate | null;
     };
     trace: Array<{ component: string; decision: string; reason: string }>;
   }>;
-  findings: Finding[];
+  findings: FindingCandidate[];
+};
+
+export type FindingStatus =
+  | "open"
+  | "triaged"
+  | "fixed"
+  | "accepted_risk"
+  | "closed";
+
+export type FindingRecord = {
+  id: string;
+  tenant_id: string;
+  application_id: string | null;
+  attack_id: string | null;
+  campaign_id: string | null;
+  severity: string;
+  title: string;
+  category: string;
+  affected_component: string | null;
+  description: string;
+  impact: string | null;
+  root_cause: string | null;
+  recommendation: string;
+  status: FindingStatus;
+  evidence: Record<string, unknown>;
+  reproduction_steps: string[];
+  remediation: string | null;
+  regression_case_id: string | null;
+  decided_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RegressionCase = {
+  case_id: string;
+  title: string;
+  category: string;
+  severity: string;
+  payload: string;
+  expected_behavior: string;
+  expected_mitigated: boolean;
+  source_finding_id: string | null;
+  source_campaign_id: string | null;
+  evidence: Record<string, unknown>;
+  reproduction_steps: string[];
+  remediation: string;
+  created_at: string;
+};
+
+export type RegressionSuiteResult = {
+  defense_mode: string;
+  tenant_id: string;
+  total: number;
+  passed: number;
+  failed: number;
+  started_at: string;
+  completed_at: string;
+  cases: Array<{
+    case_id: string;
+    title: string;
+    category: string;
+    severity: string;
+    expected_mitigated: boolean;
+    mitigated: boolean;
+    passed: boolean;
+    detection_signals: string[];
+    reason: string;
+  }>;
 };
 
 export type BenchmarkResponse = {
@@ -324,9 +393,9 @@ export async function getAttackCatalog(): Promise<AttackSeed[]> {
   }
 }
 
-export async function getFindings(): Promise<Finding[]> {
+export async function getFindings(): Promise<FindingRecord[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/red-team/findings`, {
+    const response = await fetch(`${API_BASE_URL}/api/v1/findings`, {
       cache: "no-store",
       headers: { "x-api-key": API_KEY },
     });
@@ -337,6 +406,38 @@ export async function getFindings(): Promise<Finding[]> {
   } catch {
     return [];
   }
+}
+
+export async function getRegressionCases(): Promise<RegressionCase[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/regression/cases`, {
+      cache: "no-store",
+      headers: { "x-api-key": API_KEY },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return response.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function runRegressionSuite(): Promise<RegressionSuiteResult> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/regression/runs`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": API_KEY,
+    },
+    body: JSON.stringify({ defense_mode: "layered", store_artifact: true }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Regression run failed with ${response.status}`);
+  }
+
+  return response.json();
 }
 
 export async function getObservabilitySummary(): Promise<ObservabilitySummary> {

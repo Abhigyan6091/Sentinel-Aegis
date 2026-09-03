@@ -33,6 +33,12 @@ class CampaignStore:
         campaigns = self._campaigns.get(tenant_id, [])
         return campaigns[-1] if campaigns else None
 
+    def get(self, tenant_id: str, campaign_id: str) -> CampaignRunResponse | None:
+        for campaign in self._campaigns.get(tenant_id, []):
+            if campaign.campaign.campaign_id == campaign_id:
+                return campaign
+        return None
+
     def findings(self, tenant_id: str):
         campaigns = self._campaigns.get(tenant_id, [])
         return [finding for campaign in campaigns for finding in campaign.findings]

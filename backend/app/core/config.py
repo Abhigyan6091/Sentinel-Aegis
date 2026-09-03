@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     telemetry_enabled: bool = True
     otlp_endpoint: str | None = None
     event_bus: str = "memory"
+    regression_fixtures_dir: str = "./regression/cases"
+    report_artifacts_dir: str = "./artifacts"
     redpanda_bootstrap_servers: str = "redpanda:9092"
     security_events_topic: str = "sentinel-aegis.security-events"
     api_keys: dict[str, str] = Field(
