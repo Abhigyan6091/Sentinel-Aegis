@@ -101,6 +101,31 @@ Development API keys:
 - `dev-aegis-key`: `tenant-demo`
 - `dev-other-key`: `tenant-other`
 
+## Production Identity
+
+Sentinel Aegis supports issuer/audience validated JWT bearer tokens for production deployments while keeping development API keys enabled by default for local demos.
+
+JWT claims used by the API:
+
+- `sub`: user id.
+- `tenant_id` or `tid`: tenant id.
+- `roles`: list of role names.
+- `application_id`: optional application context.
+
+Production JWT settings:
+
+```bash
+AEGIS_AUTH_MODE=jwt
+AEGIS_ALLOW_DEV_API_KEYS=false
+AEGIS_JWT_ISSUER=https://issuer.example
+AEGIS_JWT_AUDIENCE=sentinel-aegis
+AEGIS_JWT_JWKS_URL=https://issuer.example/.well-known/jwks.json
+AEGIS_JWT_ALGORITHMS='["RS256"]'
+AEGIS_JWT_CLOCK_SKEW_SECONDS=30
+```
+
+For local tests, `AEGIS_JWT_JWKS_JSON` can provide an inline JWKS document instead of `AEGIS_JWT_JWKS_URL`.
+
 ## Local Setup
 
 ```bash
@@ -208,6 +233,7 @@ Current tests cover:
 
 - Settings defaults.
 - Authentication failures and success.
+- RS256 JWT validation, issuer/audience checks, disabled development API keys, role authorization, and JWT tenant isolation.
 - In-memory rate limiting.
 - Tenant-scoped application isolation.
 - Enterprise Support Agent guardrails, tool authorization, and audit records.
@@ -221,6 +247,7 @@ Current tests cover:
 - Qdrant is available but document ingestion, embeddings, and vector retrieval are not implemented yet.
 - OpenTelemetry instrumentation, Grafana dashboards, and Redpanda event streaming are not implemented yet.
 - Security-gate reports include regression case templates, but committing generated regression files is still manual.
+- Role claims are enforced by reusable helpers, but full organization membership management UI/API is not implemented yet.
 - Policy CRUD, approval queues, role management UI, and provider selection are not implemented yet.
 - High-risk actions such as refunds are simulated locally.
 

@@ -8,6 +8,8 @@ The reduced 5-phase MVP is complete. The next work turns Sentinel Aegis from a s
 
 Goal: replace development-only auth with production identity boundaries.
 
+Status: core JWT authentication is implemented. Organization, project, role-membership management, and route-by-route role policy rollout remain future P1 expansion work.
+
 - Add JWT issuer validation with JWKS discovery.
 - Add configurable issuer, audience, algorithm, and clock-skew settings.
 - Add organization, project, role, and membership models.
