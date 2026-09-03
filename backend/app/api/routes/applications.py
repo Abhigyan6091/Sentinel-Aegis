@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,12 +11,14 @@ from app.models.foundation import Application
 from app.schemas.applications import ApplicationCreate, ApplicationRead
 
 router = APIRouter(prefix="/applications", tags=["applications"])
+CurrentIdentity = Annotated[RequestIdentity, Depends(get_current_identity)]
+DatabaseSession = Annotated[AsyncSession, Depends(get_session)]
 
 
 @router.get("", response_model=list[ApplicationRead])
 async def list_applications(
-    identity: RequestIdentity = Depends(get_current_identity),
-    session: AsyncSession = Depends(get_session),
+    identity: CurrentIdentity,
+    session: DatabaseSession,
 ) -> list[Application]:
     result = await session.scalars(
         select(Application)
@@ -27,8 +31,8 @@ async def list_applications(
 @router.post("", response_model=ApplicationRead, status_code=status.HTTP_201_CREATED)
 async def create_application(
     payload: ApplicationCreate,
-    identity: RequestIdentity = Depends(get_current_identity),
-    session: AsyncSession = Depends(get_session),
+    identity: CurrentIdentity,
+    session: DatabaseSession,
 ) -> Application:
     application = Application(
         tenant_id=identity.tenant_id,

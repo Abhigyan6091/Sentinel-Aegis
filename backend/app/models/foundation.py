@@ -1,8 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
-from sqlalchemy import JSON
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -45,6 +44,17 @@ class Application(Base, TimestampMixin, TenantScopedMixin):
     __table_args__ = (Index("ix_applications_tenant_name", "tenant_id", "name"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+
+
+class Project(Base, TimestampMixin, TenantScopedMixin):
+    __tablename__ = "projects"
+    __table_args__ = (Index("ix_projects_tenant_name", "tenant_id", "name"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
+    application_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("applications.id"))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")

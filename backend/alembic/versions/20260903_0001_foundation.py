@@ -8,6 +8,7 @@ Create Date: 2026-09-03
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "20260903_0001"
@@ -54,6 +55,18 @@ def upgrade() -> None:
     )
     op.create_index("ix_applications_tenant_id", "applications", ["tenant_id"])
     op.create_index("ix_applications_tenant_name", "applications", ["tenant_id", "name"])
+    op.create_table(
+        "projects",
+        sa.Column("id", sa.String(length=64), primary_key=True),
+        tenant_column(),
+        sa.Column("application_id", sa.String(length=64), sa.ForeignKey("applications.id")),
+        sa.Column("name", sa.String(length=255), nullable=False),
+        sa.Column("description", sa.Text(), nullable=True),
+        sa.Column("status", sa.String(length=32), nullable=False),
+        *timestamps(),
+    )
+    op.create_index("ix_projects_tenant_id", "projects", ["tenant_id"])
+    op.create_index("ix_projects_tenant_name", "projects", ["tenant_id", "name"])
     op.create_table(
         "policies",
         sa.Column("id", sa.String(length=64), primary_key=True),
@@ -206,6 +219,7 @@ def downgrade() -> None:
         "attack_campaigns",
         "guardrails",
         "policies",
+        "projects",
         "applications",
         "users",
         "tenants",
