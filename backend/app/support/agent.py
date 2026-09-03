@@ -2,8 +2,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.providers import LLMProvider, create_llm_provider
 from app.core.identity import RequestIdentity
+from app.events.bus import get_event_bus
 from app.models.foundation import SecurityEvent, ToolCall
 from app.observability.service import record_support_response
+from app.observability.telemetry import get_telemetry
 from app.policies.service import active_policy_engine, record_approval_request
 from app.rag.service import IngestedRagRetriever
 from app.schemas.support import (
@@ -14,7 +16,14 @@ from app.schemas.support import (
     policy_to_tool_audit,
 )
 from app.security.context_firewall import ContextFirewall
-from app.security.guardrails import PIIDetector, PromptInjectionDetector, redact_pii
+from app.security.guardrails import (
+    MultiTurnPromptInjectionDetector,
+    PIIDetector,
+    PromptInjectionDetector,
+    SecretDetector,
+    redact_pii,
+    redact_secrets,
+)
 from app.security.policy import PolicyEngine
 from app.security.runtime import Decision, Risk
 from app.support.documents import LocalSupportRetriever
@@ -39,7 +48,9 @@ class SupportAgent:
         self.policy = policy
         self.tools = tools or MockSupportTools()
         self.prompt_detector = PromptInjectionDetector()
+        self.multi_turn_detector = MultiTurnPromptInjectionDetector()
         self.pii_detector = PIIDetector()
+        self.secret_detector = SecretDetector()
         self.context_firewall = ContextFirewall()
 
     async def run(
@@ -48,10 +59,27 @@ class SupportAgent:
         identity: RequestIdentity,
         session: AsyncSession | None = None,
     ) -> SupportChatResponse:
-        trace = [
-            TraceStep(component="gateway", decision="ALLOW", reason="Authenticated request."),
+        with get_telemetry().start_span(
+            "support.chat",
+            identity.tenant_id,
+            request_id=identity.request_id,
+            application_id=identity.application_id,
+        ):
+            return await self._run_with_defenses(payload, identity, session)
+
+    async def _run_with_defenses(
+        self,
+        payload: SupportChatRequest,
+        identity: RequestIdentity,
+        session: AsyncSession | None = None,
+    ) -> SupportChatResponse:
+        trace = [TraceStep(component="gateway", decision="ALLOW", reason="Authenticated request.")]
+        guardrails = [
+            await self.prompt_detector.evaluate(payload.message),
+            await self.multi_turn_detector.evaluate(payload.message),
+            await self.pii_detector.evaluate(payload.message),
+            await self.secret_detector.evaluate(payload.message),
         ]
-        guardrails = [await self.prompt_detector.evaluate(payload.message)]
         if any(result.decision == Decision.BLOCK for result in guardrails):
             trace.append(
                 TraceStep(
@@ -66,6 +94,11 @@ class SupportAgent:
                 "PROMPT_INJECTION_DETECTED",
                 Risk.CRITICAL,
                 {"message": "blocked"},
+            )
+            await get_event_bus().publish(
+                identity.tenant_id,
+                "security.prompt_injection_detected",
+                {"request_id": identity.request_id},
             )
             response = SupportChatResponse(
                 request_id=identity.request_id,
@@ -82,8 +115,19 @@ class SupportAgent:
             await record_support_response(session, identity, response)
             return response
 
+        safe_message = payload.message
+        if any(result.decision == Decision.SANITIZE for result in guardrails):
+            safe_message = redact_secrets(redact_pii(payload.message))
+            trace.append(
+                TraceStep(
+                    component="input_guardrail",
+                    decision="SANITIZE",
+                    reason="Sensitive input values redacted before retrieval and provider execution.",
+                )
+            )
+
         retriever = self.retriever or self._default_retriever(session)
-        documents = await retriever.retrieve(payload.message, identity.tenant_id)
+        documents = await retriever.retrieve(safe_message, identity.tenant_id)
         firewall_result = self.context_firewall.inspect(documents)
         trace.append(
             TraceStep(
@@ -94,7 +138,7 @@ class SupportAgent:
         )
 
         llm_response = await self.provider.generate(
-            payload.message,
+            safe_message,
             TRUSTED_SUPPORT_INSTRUCTIONS,
             firewall_result.allowed_context,
         )
@@ -130,29 +174,40 @@ class SupportAgent:
             )
             await self._record_tool_call(session, identity, audit)
 
-        output_guardrail = await self.pii_detector.evaluate(llm_response.content)
-        guardrails.append(output_guardrail)
-        answer = redact_pii(llm_response.content)
-        decision = output_guardrail.decision
+        output_guardrails = [
+            await self.pii_detector.evaluate(llm_response.content),
+            await self.secret_detector.evaluate(llm_response.content),
+        ]
+        guardrails.extend(output_guardrails)
+        answer = redact_secrets(redact_pii(llm_response.content))
+        decision = Decision.ALLOW
+        if any(result.decision == Decision.SANITIZE for result in output_guardrails):
+            decision = Decision.SANITIZE
         if any(call.decision == Decision.REQUIRE_APPROVAL for call in tool_calls):
             decision = Decision.WARN
             answer = f"{answer} Human approval is required before this tool can run."
 
-        if output_guardrail.decision == Decision.SANITIZE:
-            await self._record_event(
-                session,
-                identity,
-                "PII_REDACTED",
-                output_guardrail.risk,
-                {"guardrail": output_guardrail.guardrail},
-            )
-            trace.append(
-                TraceStep(
-                    component="output_guardrail",
-                    decision="SANITIZE",
-                    reason=output_guardrail.reason,
+        for output_guardrail in output_guardrails:
+            if output_guardrail.decision == Decision.SANITIZE:
+                event_type = (
+                    "PII_REDACTED"
+                    if output_guardrail.guardrail == self.pii_detector.guardrail
+                    else "SECRET_REDACTED"
                 )
-            )
+                await self._record_event(
+                    session,
+                    identity,
+                    event_type,
+                    output_guardrail.risk,
+                    {"guardrail": output_guardrail.guardrail},
+                )
+                trace.append(
+                    TraceStep(
+                        component="output_guardrail",
+                        decision="SANITIZE",
+                        reason=output_guardrail.reason,
+                    )
+                )
 
         await self._record_event(
             session,
@@ -176,6 +231,25 @@ class SupportAgent:
         )
         await record_support_response(session, identity, response)
         return response
+
+    async def run_without_defenses(
+        self,
+        payload: SupportChatRequest,
+        identity: RequestIdentity,
+    ) -> SupportChatResponse:
+        answer = "Unprotected runtime executed the request without guardrail intervention."
+        return SupportChatResponse(
+            request_id=identity.request_id,
+            answer=answer,
+            decision=Decision.ALLOW,
+            blocked=False,
+            guardrails=[],
+            context_documents=[],
+            allowed_context=[],
+            tool_calls=[],
+            trace=[TraceStep(component="benchmark", decision="ALLOW", reason="No defense mode.")],
+            tokens={"input": len(payload.message.split()), "output": len(answer.split())},
+        )
 
     async def _record_tool_call(
         self,

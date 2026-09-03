@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 32
     rag_chunk_size: int = 700
     rag_chunk_overlap: int = 100
+    telemetry_enabled: bool = True
+    otlp_endpoint: str | None = None
+    event_bus: str = "memory"
+    redpanda_bootstrap_servers: str = "redpanda:9092"
+    security_events_topic: str = "sentinel-aegis.security-events"
     api_keys: dict[str, str] = Field(
         default_factory=lambda: {
             "tenant-demo": "dev-aegis-key",

@@ -85,6 +85,8 @@ Exit criteria:
 
 Goal: compare layered defenses with measurable tradeoffs.
 
+Status: core secret detection, secret redaction, multi-turn prompt-injection detection, validated defense-mode schemas, benchmark API execution, and the `/evaluations` console page are implemented. Classifier, LLM-judge, Presidio-backed PII, cost analytics, and richer comparison charts remain future P5 expansion work.
+
 - Add secret and credential detection.
 - Add classifier-based prompt-injection detector.
 - Add optional LLM-judge evaluator.
@@ -107,6 +109,8 @@ Exit criteria:
 ## Phase P6: Full Observability And Event Streaming
 
 Goal: move from summary counters to production operations telemetry.
+
+Status: local telemetry spans, security-event envelopes, event-bus selection, Redpanda-ready adapter scaffolding, Grafana dashboard provisioning, and phase coverage tests are implemented. Full OpenTelemetry instrumentation, OTLP export, durable Redpanda producers/consumers, async report consumers, and alerting remain future P6 expansion work.
 
 - Add OpenTelemetry instrumentation for API, provider, RAG, guardrails, tools, and campaigns.
 - Export traces to an OTLP-compatible collector.

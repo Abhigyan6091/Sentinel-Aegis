@@ -7,8 +7,8 @@ from app.core.identity import RequestIdentity
 from app.core.security import get_current_identity
 from app.db.session import get_session
 from app.redteam.attacks import AttackGenerator, AttackSeed
-from app.redteam.runner import CampaignRunner, campaign_store
-from app.schemas.redteam import CampaignCreate, CampaignRunResponse
+from app.redteam.runner import BenchmarkRunner, CampaignRunner, campaign_store
+from app.schemas.redteam import BenchmarkCreate, BenchmarkResponse, CampaignCreate, CampaignRunResponse
 
 router = APIRouter(prefix="/red-team", tags=["red-team"])
 CurrentIdentity = Annotated[RequestIdentity, Depends(get_current_identity)]
@@ -32,6 +32,19 @@ async def run_campaign(
     session: DatabaseSession,
 ) -> CampaignRunResponse:
     return await CampaignRunner().run(payload, identity, session)
+
+
+@router.post(
+    "/benchmarks",
+    response_model=BenchmarkResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def run_benchmark(
+    payload: BenchmarkCreate,
+    identity: CurrentIdentity,
+    session: DatabaseSession,
+) -> BenchmarkResponse:
+    return await BenchmarkRunner().run(payload, identity, session)
 
 
 @router.get("/campaigns/latest", response_model=CampaignRunResponse)

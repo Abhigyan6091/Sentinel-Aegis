@@ -1,0 +1,42 @@
+{
+  "title": "Sentinel Aegis Security Overview",
+  "uid": "sentinel-aegis-security",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Runtime Requests",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(sentinel_aegis_requests_total)"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Guardrail Blocks",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(sentinel_aegis_guardrail_blocks_total)"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Attack Outcomes",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (outcome) (sentinel_aegis_attack_results_total)"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    }
+  ]
+}

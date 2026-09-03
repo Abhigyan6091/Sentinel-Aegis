@@ -21,7 +21,7 @@ flowchart LR
   Frontend[Next.js Console] --> Gateway
 ```
 
-Qdrant, Redpanda, Prometheus, and Grafana are available in Docker Compose. Prometheus can now scrape the backend `/metrics` endpoint; Qdrant, Redpanda, and Grafana dashboard provisioning remain expansion points.
+Qdrant, Redpanda, Prometheus, and Grafana are available in Docker Compose. Prometheus can scrape the backend `/metrics` endpoint, Qdrant backs production-like RAG retrieval, and Grafana now provisions a Sentinel Aegis security overview dashboard.
 
 ## Reduced Roadmap
 
@@ -91,6 +91,7 @@ Milestone 4 records support responses, campaign attack results, evaluation runs,
 - `POST /api/v1/support/chat`: Enterprise Support Agent runtime pipeline.
 - `GET /api/v1/red-team/attacks`: deterministic attack seed catalog.
 - `POST /api/v1/red-team/campaigns`: run a bounded local red-team campaign.
+- `POST /api/v1/red-team/benchmarks`: compare multiple defense modes against the same attack set.
 - `GET /api/v1/red-team/campaigns/latest`: latest tenant-scoped campaign result.
 - `GET /api/v1/red-team/findings`: findings created from observed successful attacks.
 - `POST /api/v1/rag/documents`: ingest a tenant-scoped RAG document.
@@ -236,6 +237,19 @@ curl -X POST http://localhost:8000/api/v1/red-team/campaigns \
   -d '{"name":"Demo Campaign","attack_count":5,"mutation_depth":2}'
 ```
 
+## Benchmark Evaluation Demo
+
+Open `http://localhost:3000/evaluations` to run a defense-mode benchmark. The API compares the same deterministic attack set across `no_defense`, `rules_only`, `classifier`, `llm_judge`, and `layered` modes.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/red-team/benchmarks \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: dev-aegis-key' \
+  -d '{"name":"Defense Benchmark","attack_count":5,"mutation_depth":2,"defense_modes":["no_defense","rules_only","layered"]}'
+```
+
+Secret detection and multi-turn prompt-injection detection are implemented in the runtime guardrail layer. Classifier, LLM-judge, and Presidio-backed modes are represented as validated benchmark modes, but model-backed classifiers and Presidio integration remain future hardening work.
+
 ### Scoring Methodology
 
 The overall score is calculated from measured attack outcomes:
@@ -257,6 +271,8 @@ Example metrics scrape:
 ```bash
 curl http://localhost:8000/metrics
 ```
+
+Runtime calls also record in-process telemetry spans and publish security envelopes to the configured event bus. The local default is an in-memory bus for deterministic tests; `AEGIS_EVENT_BUS=redpanda` selects the Redpanda-ready adapter placeholder while real Kafka producer/consumer workers remain future expansion work.
 
 ## CI Security Gate
 
@@ -312,7 +328,8 @@ Current tests cover:
 - Tenant-scoped application isolation.
 - Enterprise Support Agent guardrails, tool authorization, and audit records.
 - Red-team attack catalog, campaign execution, findings, and scoring.
-- Observability summary/traces, tenant scoping, Prometheus metrics, and campaign persistence.
+- Secret detection, multi-turn prompt-injection detection, benchmark mode comparison, and dashboard provisioning.
+- Observability summary/traces, tenant scoping, local telemetry spans, security events, Prometheus metrics, and campaign persistence.
 - CI security-gate pass/fail threshold logic and CLI JSON output.
 
 ## Limitations
@@ -320,7 +337,8 @@ Current tests cover:
 - The default LLM provider remains deterministic local mode, but OpenAI and Anthropic adapters are available for configured deployments.
 - Provider token usage is normalized, but durable cost analytics and per-tenant provider budgets are not implemented yet.
 - Qdrant-backed retrieval is available through the HTTP vector-store abstraction, but embeddings are deterministic local vectors rather than model-generated embeddings.
-- OpenTelemetry instrumentation, Grafana dashboards, and Redpanda event streaming are not implemented yet.
+- Grafana dashboard provisioning and local telemetry spans are implemented; full OTLP export and durable Redpanda producer/consumer workers are not implemented yet.
+- Classifier, LLM-judge, and Presidio-backed guardrail modes are validated benchmark modes, but their model-backed implementations are not wired yet.
 - Security-gate reports include regression case templates, but committing generated regression files is still manual.
 - Role claims are enforced by reusable helpers, but full organization membership management UI/API is not implemented yet.
 - Policy CRUD and approval queues are implemented; role management UI and per-application provider selection are not implemented yet.
@@ -328,4 +346,4 @@ Current tests cover:
 
 ## Future Work
 
-Next expansion work should focus on provider/RAG depth, automated regression generation from findings, policy-center CRUD, approval workflows, OpenTelemetry/Grafana dashboards, and production-grade auth.
+Next expansion work should focus on automated regression generation from findings, full OTLP/Redpanda workers, model-backed advanced guardrails, deployment hardening, secrets management, and production runbooks.

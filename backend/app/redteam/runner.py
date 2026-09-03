@@ -8,10 +8,14 @@ from app.redteam.attacks import AttackGenerator
 from app.redteam.evaluator import SecurityEvaluator
 from app.redteam.scoring import SecurityScorer
 from app.schemas.redteam import (
+    BenchmarkCreate,
+    BenchmarkResponse,
+    BenchmarkRun,
     CampaignAttackResult,
     CampaignCreate,
     CampaignRunResponse,
     CampaignSummary,
+    DefenseMode,
     new_campaign_id,
 )
 from app.schemas.support import SupportChatRequest
@@ -67,11 +71,17 @@ class CampaignRunner:
         findings = []
 
         for variant in variants:
-            runtime_response = await self.agent.run(
-                SupportChatRequest(message=variant.payload, application_id=identity.application_id),
-                identity,
-                session,
-            )
+            if request.defense_mode == DefenseMode.NO_DEFENSE:
+                runtime_response = await self.agent.run_without_defenses(
+                    SupportChatRequest(message=variant.payload, application_id=identity.application_id),
+                    identity,
+                )
+            else:
+                runtime_response = await self.agent.run(
+                    SupportChatRequest(message=variant.payload, application_id=identity.application_id),
+                    identity,
+                    session,
+                )
             evaluation = self.evaluator.evaluate(variant, runtime_response)
             evaluations.append(evaluation)
             if evaluation.finding is not None:
@@ -101,7 +111,39 @@ class CampaignRunner:
             score=self.scorer.score(evaluations),
             results=attack_results,
             findings=findings,
+            defense_mode=request.defense_mode,
         )
         campaign_store.add(identity.tenant_id, response)
         await record_campaign_result(session, identity, response)
         return response
+
+
+class BenchmarkRunner:
+    async def run(
+        self,
+        request: BenchmarkCreate,
+        identity: RequestIdentity,
+        session: AsyncSession | None = None,
+    ) -> BenchmarkResponse:
+        runs: list[BenchmarkRun] = []
+        for mode in request.defense_modes:
+            campaign = await CampaignRunner().run(
+                CampaignCreate(
+                    name=f"{request.name} - {mode.value}",
+                    categories=request.categories,
+                    attack_count=request.attack_count,
+                    mutation_depth=request.mutation_depth,
+                    defense_mode=mode,
+                ),
+                identity,
+                session,
+            )
+            runs.append(
+                BenchmarkRun(
+                    defense_mode=mode,
+                    score=campaign.score,
+                    findings_count=len(campaign.findings),
+                    attack_success_rate=campaign.score.attack_success_rate,
+                )
+            )
+        return BenchmarkResponse(name=request.name, tenant_id=identity.tenant_id, runs=runs)

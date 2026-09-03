@@ -95,7 +95,13 @@ async def record_campaign_result(
             result.evaluation,
         )
     for finding in campaign.findings:
-        await persist_finding(session, identity, application_id, finding)
+        await persist_finding(
+            session,
+            identity,
+            application_id,
+            campaign.campaign.campaign_id,
+            finding,
+        )
     await session.commit()
 
 
@@ -204,11 +210,12 @@ async def persist_finding(
     session: AsyncSession,
     identity: RequestIdentity,
     application_id: str,
+    campaign_id: str,
     finding: FindingCandidate,
 ) -> None:
     session.add(
         Finding(
-            id=finding.finding_id,
+            id=f"{campaign_id}-{finding.finding_id}",
             tenant_id=identity.tenant_id,
             application_id=application_id,
             attack_id=finding.attack_id,

@@ -103,6 +103,7 @@ export type CampaignRunResponse = {
     attacks_executed: number;
     successful_attacks: number;
   };
+  defense_mode: string;
   results: Array<{
     variant: {
       attack_id: string;
@@ -132,6 +133,17 @@ export type CampaignRunResponse = {
     trace: Array<{ component: string; decision: string; reason: string }>;
   }>;
   findings: Finding[];
+};
+
+export type BenchmarkResponse = {
+  name: string;
+  tenant_id: string;
+  runs: Array<{
+    defense_mode: string;
+    score: CampaignRunResponse["score"];
+    findings_count: number;
+    attack_success_rate: number;
+  }>;
 };
 
 export type ObservabilitySummary = {
@@ -255,6 +267,28 @@ export async function runCampaign(): Promise<CampaignRunResponse> {
 
   if (!response.ok) {
     throw new Error(`Campaign request failed with ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function runBenchmark(): Promise<BenchmarkResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/red-team/benchmarks`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": API_KEY,
+    },
+    body: JSON.stringify({
+      name: "Defense Mode Benchmark",
+      attack_count: 5,
+      mutation_depth: 2,
+      defense_modes: ["no_defense", "rules_only", "classifier", "llm_judge", "layered"],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Benchmark request failed with ${response.status}`);
   }
 
   return response.json();

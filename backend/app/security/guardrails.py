@@ -6,6 +6,10 @@ from app.security.runtime import Decision, GuardrailResult, Risk, latency_ms
 _SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 _CREDIT_CARD_RE = re.compile(r"\b(?:\d[ -]*?){13,16}\b")
+_SECRET_RE = re.compile(
+    r"\b(?:sk-proj|sk|AKIA|ghp|xoxb|xoxp)[A-Za-z0-9_-]{10,}\b",
+    re.IGNORECASE,
+)
 _INJECTION_PATTERNS = (
     re.compile(r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions", re.IGNORECASE),
     re.compile(r"reveal\s+(the\s+)?(system|developer)\s+prompt", re.IGNORECASE),
@@ -18,6 +22,10 @@ def redact_pii(text: str) -> str:
     redacted = _SSN_RE.sub("[REDACTED_SSN]", text)
     redacted = _EMAIL_RE.sub("[REDACTED_EMAIL]", redacted)
     return _CREDIT_CARD_RE.sub("[REDACTED_PAYMENT_CARD]", redacted)
+
+
+def redact_secrets(text: str) -> str:
+    return _SECRET_RE.sub("[REDACTED_SECRET]", text)
 
 
 class PromptInjectionDetector:
@@ -80,6 +88,65 @@ class PIIDetector:
             risk=Risk.LOW,
             confidence=0.85,
             reason="No PII pattern detected.",
+            guardrail=self.guardrail,
+            latency_ms=latency_ms(started_at),
+        )
+
+
+class SecretDetector:
+    guardrail = "secret"
+
+    async def evaluate(self, text: str) -> GuardrailResult:
+        started_at = perf_counter()
+        if _SECRET_RE.search(text):
+            return GuardrailResult(
+                decision=Decision.SANITIZE,
+                risk=Risk.CRITICAL,
+                confidence=0.94,
+                reason="Credential-like secret detected.",
+                guardrail=self.guardrail,
+                latency_ms=latency_ms(started_at),
+            )
+        return GuardrailResult(
+            decision=Decision.ALLOW,
+            risk=Risk.LOW,
+            confidence=0.86,
+            reason="No credential-like secret detected.",
+            guardrail=self.guardrail,
+            latency_ms=latency_ms(started_at),
+        )
+
+
+class MultiTurnPromptInjectionDetector:
+    guardrail = "multi_turn_prompt_injection"
+
+    def __init__(self) -> None:
+        self.history: list[str] = []
+
+    async def evaluate(self, text: str) -> GuardrailResult:
+        started_at = perf_counter()
+        normalized = " ".join([*self.history, text]).lower()
+        self.history.append(text)
+        self.history = self.history[-4:]
+        has_fragmented_override = (
+            "ignore" in normalized
+            and "previous instructions" in normalized
+            and "system prompt" in normalized
+        )
+        if has_fragmented_override:
+            return GuardrailResult(
+                decision=Decision.BLOCK,
+                risk=Risk.CRITICAL,
+                confidence=0.88,
+                reason="Fragmented multi-turn instruction override detected.",
+                guardrail=self.guardrail,
+                latency_ms=latency_ms(started_at),
+            )
+        return GuardrailResult(
+            decision=Decision.ALLOW,
+            risk=Risk.LOW,
+            confidence=0.78,
+            reason="No multi-turn prompt injection pattern detected.",
             guardrail=self.guardrail,
             latency_ms=latency_ms(started_at),
         )
