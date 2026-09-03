@@ -27,6 +27,8 @@ Exit criteria:
 
 Goal: support real LLM providers while keeping deterministic local mode for tests.
 
+Status: core OpenAI and Anthropic adapters are implemented with environment selection, timeout settings, retry settings, mocked tests, and normalized provider/model/token metadata. Per-application provider config, durable cost analytics, and circuit-breaker state remain future P2 expansion work.
+
 - Add OpenAI provider behind the existing provider interface.
 - Add Anthropic provider behind the same interface.
 - Add provider selection by environment and per-application config.

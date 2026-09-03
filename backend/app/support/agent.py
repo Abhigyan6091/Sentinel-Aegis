@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.providers import LLMProvider, LocalProvider
+from app.ai.providers import LLMProvider, create_llm_provider
 from app.core.identity import RequestIdentity
 from app.models.foundation import SecurityEvent, ToolCall
 from app.observability.service import record_support_response
@@ -32,7 +32,7 @@ class SupportAgent:
         policy: PolicyEngine | None = None,
         tools: MockSupportTools | None = None,
     ) -> None:
-        self.provider = provider or LocalProvider()
+        self.provider = provider or create_llm_provider()
         self.retriever = retriever or LocalSupportRetriever()
         self.policy = policy or PolicyEngine.default()
         self.tools = tools or MockSupportTools()

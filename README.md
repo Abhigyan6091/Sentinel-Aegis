@@ -126,6 +126,28 @@ AEGIS_JWT_CLOCK_SKEW_SECONDS=30
 
 For local tests, `AEGIS_JWT_JWKS_JSON` can provide an inline JWKS document instead of `AEGIS_JWT_JWKS_URL`.
 
+## LLM Providers
+
+The deterministic local provider remains the default for tests and demos. Production deployments can select OpenAI or Anthropic behind the same support-agent provider interface:
+
+```bash
+AEGIS_LLM_PROVIDER=openai
+AEGIS_OPENAI_API_KEY=sk-...
+AEGIS_OPENAI_MODEL=gpt-4.1-mini
+AEGIS_LLM_TIMEOUT_SECONDS=30
+AEGIS_LLM_MAX_RETRIES=2
+```
+
+```bash
+AEGIS_LLM_PROVIDER=anthropic
+AEGIS_ANTHROPIC_API_KEY=sk-ant-...
+AEGIS_ANTHROPIC_MODEL=claude-3-5-sonnet-latest
+AEGIS_LLM_TIMEOUT_SECONDS=30
+AEGIS_LLM_MAX_RETRIES=2
+```
+
+Provider responses are normalized into the existing runtime schema with content, provider name, model name, input tokens, and output tokens. Tests use mocked HTTP transports and do not require live provider keys.
+
 ## Local Setup
 
 ```bash
@@ -234,6 +256,7 @@ Current tests cover:
 - Settings defaults.
 - Authentication failures and success.
 - RS256 JWT validation, issuer/audience checks, disabled development API keys, role authorization, and JWT tenant isolation.
+- Local/OpenAI/Anthropic provider selection, provider config errors, HTTP response mapping, and retry failure behavior.
 - In-memory rate limiting.
 - Tenant-scoped application isolation.
 - Enterprise Support Agent guardrails, tool authorization, and audit records.
@@ -243,12 +266,13 @@ Current tests cover:
 
 ## Limitations
 
-- The current LLM provider, guardrails, evaluator, and RAG fixtures are deterministic local implementations.
+- The default LLM provider remains deterministic local mode, but OpenAI and Anthropic adapters are available for configured deployments.
+- Provider token usage is normalized, but durable cost analytics and per-tenant provider budgets are not implemented yet.
 - Qdrant is available but document ingestion, embeddings, and vector retrieval are not implemented yet.
 - OpenTelemetry instrumentation, Grafana dashboards, and Redpanda event streaming are not implemented yet.
 - Security-gate reports include regression case templates, but committing generated regression files is still manual.
 - Role claims are enforced by reusable helpers, but full organization membership management UI/API is not implemented yet.
-- Policy CRUD, approval queues, role management UI, and provider selection are not implemented yet.
+- Policy CRUD, approval queues, role management UI, and per-application provider selection are not implemented yet.
 - High-risk actions such as refunds are simulated locally.
 
 ## Future Work

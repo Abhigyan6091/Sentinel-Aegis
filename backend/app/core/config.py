@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     jwt_jwks_json: str | None = None
     jwt_algorithms: list[str] = Field(default_factory=lambda: ["RS256"])
     jwt_clock_skew_seconds: int = 30
+    llm_provider: str = "local"
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4.1-mini"
+    anthropic_api_key: str | None = None
+    anthropic_model: str = "claude-3-5-sonnet-latest"
+    llm_timeout_seconds: float = 30
+    llm_max_retries: int = 2
     api_keys: dict[str, str] = Field(
         default_factory=lambda: {
             "tenant-demo": "dev-aegis-key",
