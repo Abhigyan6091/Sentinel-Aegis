@@ -1,12 +1,12 @@
-# AegisAI
+# Sentinel Aegis
 
-AegisAI is a local, portfolio-grade AI application security and red-teaming platform. It is designed to demonstrate practical controls for prompt injection, jailbreaks, RAG poisoning, tool abuse, data leakage, policy enforcement, observability, and security scoring.
+Sentinel Aegis is a local, portfolio-grade AI application security and red-teaming platform. It is designed to demonstrate practical controls for prompt injection, jailbreaks, RAG poisoning, tool abuse, data leakage, policy enforcement, observability, and security scoring.
 
 This repository is intentionally incremental. Milestone 1 builds the foundation: a FastAPI backend, tenant-aware persistence, authentication, rate limiting primitives, a Next.js security console, Docker Compose infrastructure, CI, and documentation. Later milestones add the vulnerable Enterprise Support Agent, runtime defenses, red-team campaigns, observability, and CI/CD security gates.
 
 ## Why AI Applications Need Security
 
-LLM applications combine untrusted user input, retrieved documents, model reasoning, and tool execution. Traditional web security controls are still necessary, but they do not cover instruction hierarchy attacks, indirect prompt injection, excessive agency, or leakage from model-generated output. AegisAI models these risks as observable runtime and testing workflows.
+LLM applications combine untrusted user input, retrieved documents, model reasoning, and tool execution. Traditional web security controls are still necessary, but they do not cover instruction hierarchy attacks, indirect prompt injection, excessive agency, or leakage from model-generated output. Sentinel Aegis models these risks as observable runtime and testing workflows.
 
 ## Architecture
 
