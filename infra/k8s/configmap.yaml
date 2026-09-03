@@ -24,5 +24,3 @@ data:
   AEGIS_RAG_VECTOR_STORE: "qdrant"
   AEGIS_QDRANT_URL: "http://qdrant:6333"
   AEGIS_EVENT_BUS: "memory"
-  AEGIS_SECRETS_PROVIDER: "file"
-  AEGIS_SECRETS_FILE_DIR: "/run/secrets"

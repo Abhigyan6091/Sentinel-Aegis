@@ -65,6 +65,12 @@ spec:
             - configMapRef:
                 name: sentinel-aegis-config
           env:
+            # Secret plumbing lives beside the volumeMount it governs, not in the
+            # ConfigMap, so the mount path and the reader stay in one place.
+            - name: AEGIS_SECRETS_PROVIDER
+              value: "file"
+            - name: AEGIS_SECRETS_FILE_DIR
+              value: "/run/secrets"
             - name: AEGIS_DATABASE_URL
               value: "secret://file/database_url"
             - name: AEGIS_REDIS_URL
