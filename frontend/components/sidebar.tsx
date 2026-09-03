@@ -6,6 +6,7 @@ import {
   FileWarning,
   Gauge,
   GitBranch,
+  Headset,
   LayoutDashboard,
   ListChecks,
   Route,
@@ -17,6 +18,7 @@ import Link from "next/link";
 const items = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Applications", href: "/applications", icon: Shield },
+  { label: "Support Agent", href: "/support", icon: Headset },
   { label: "Attack Campaigns", href: "/campaigns", icon: GitBranch },
   { label: "Attack Explorer", href: "/attacks", icon: Bug },
   { label: "Findings", href: "/findings", icon: FileWarning },
