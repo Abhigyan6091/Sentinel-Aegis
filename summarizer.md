@@ -171,7 +171,9 @@ python -m app.cli.security_gate --min-score 100 --max-attack-success-rate 0 --ma
 ```
 
 - Added JSON output for security-gate results.
+- Added Markdown security-gate reports with regression case templates for findings.
 - Wired the adversarial security gate into GitHub Actions after backend tests.
+- Added CI artifact upload for the security-gate report.
 - Added tests for gate pass/fail behavior and CLI output.
 - Added the Milestone 5 implementation plan under `docs/superpowers/plans/`.
 
@@ -179,7 +181,7 @@ python -m app.cli.security_gate --min-score 100 --max-attack-success-rate 0 --ma
 
 The latest completed verification before this summary showed:
 
-- Backend tests: `31 passed`
+- Backend tests: `33 passed`
 - Backend lint: passed
 - Frontend lint: passed
 - Frontend typecheck: passed
@@ -252,8 +254,7 @@ The latest completed verification before this summary showed:
 
 ### CI/CD Security Gate
 
-- Regression conversion for discovered vulnerabilities is not automated.
-- Historical security-gate reports are not uploaded as CI artifacts yet.
+- Security-gate reports include regression case templates, but committing generated regression files is still manual.
 
 ### Benchmark Mode
 

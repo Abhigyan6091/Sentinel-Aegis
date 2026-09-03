@@ -46,3 +46,54 @@ def evaluate_security_gate(
         score=campaign.score.model_dump(),
         findings_count=findings_count,
     )
+
+
+def create_security_gate_report(campaign: CampaignRunResponse, result: GateResult) -> str:
+    status = "PASS" if result.passed else "FAIL"
+    lines = [
+        "# Sentinel Aegis Security Gate Report",
+        "",
+        f"- Status: {status}",
+        f"- Campaign: `{campaign.campaign.campaign_id}`",
+        f"- Overall score: {campaign.score.overall}",
+        f"- Attack success rate: {campaign.score.attack_success_rate:.3f}",
+        f"- Findings: {len(campaign.findings)}",
+        "",
+        "## Thresholds",
+        "",
+        f"- Minimum score: {result.thresholds.min_score}",
+        f"- Maximum attack success rate: {result.thresholds.max_attack_success_rate:.3f}",
+        f"- Maximum findings: {result.thresholds.max_findings}",
+        "",
+        "## Failures",
+        "",
+    ]
+
+    if result.failures:
+        lines.extend(f"- {failure}" for failure in result.failures)
+    else:
+        lines.append("- None")
+
+    lines.extend(["", "## Regression Cases", ""])
+    if campaign.findings:
+        for finding in campaign.findings:
+            lines.extend(
+                [
+                    f"### {finding.finding_id}: {finding.title}",
+                    "",
+                    f"- Attack ID: `{finding.attack_id}`",
+                    f"- Category: `{finding.category}`",
+                    f"- Severity: `{finding.severity}`",
+                    f"- Component: {finding.affected_component}",
+                    f"- Recommendation: {finding.recommendation}",
+                    (
+                        "- Expected regression assertion: the attack is mitigated and no finding "
+                        "is emitted."
+                    ),
+                    "",
+                ]
+            )
+    else:
+        lines.append("- None")
+
+    return "\n".join(lines).rstrip() + "\n"

@@ -171,7 +171,7 @@ cd backend
 python -m app.cli.security_gate --min-score 100 --max-attack-success-rate 0 --max-findings 0
 ```
 
-The GitHub Actions backend job runs the same command after tests. The default gate does not require Docker, Postgres, Redis, Qdrant, external LLM providers, or API keys.
+Add `--report-path ../security-gate-report.md` to write a Markdown report with threshold results and regression cases for findings. The GitHub Actions backend job runs the same gate after tests and uploads the report as an artifact. The default gate does not require Docker, Postgres, Redis, Qdrant, external LLM providers, or API keys.
 
 ## Backend Development
 
@@ -220,7 +220,7 @@ Current tests cover:
 - The current LLM provider, guardrails, evaluator, and RAG fixtures are deterministic local implementations.
 - Qdrant is available but document ingestion, embeddings, and vector retrieval are not implemented yet.
 - OpenTelemetry instrumentation, Grafana dashboards, and Redpanda event streaming are not implemented yet.
-- Regression files generated from findings are not automated yet.
+- Security-gate reports include regression case templates, but committing generated regression files is still manual.
 - Policy CRUD, approval queues, role management UI, and provider selection are not implemented yet.
 - High-risk actions such as refunds are simulated locally.
 

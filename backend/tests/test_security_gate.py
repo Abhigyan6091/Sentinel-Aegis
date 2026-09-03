@@ -3,7 +3,11 @@ import subprocess
 import sys
 
 from app.redteam.scoring import SecurityScore
-from app.redteam.security_gate import GateThresholds, evaluate_security_gate
+from app.redteam.security_gate import (
+    GateThresholds,
+    create_security_gate_report,
+    evaluate_security_gate,
+)
 from app.schemas.redteam import CampaignRunResponse, CampaignSummary
 
 
@@ -106,3 +110,45 @@ def test_security_gate_cli_outputs_json_and_exits_successfully():
     assert payload["passed"] is True
     assert payload["score"]["overall"] == 100
     assert payload["thresholds"]["min_score"] == 100
+
+
+def test_security_gate_report_includes_regression_cases_for_findings():
+    campaign = make_campaign(overall=60, attack_success_rate=0.4, findings=2)
+    result = evaluate_security_gate(
+        campaign,
+        GateThresholds(min_score=90, max_attack_success_rate=0, max_findings=0),
+    )
+
+    report = create_security_gate_report(campaign, result)
+
+    assert "# Sentinel Aegis Security Gate Report" in report
+    assert "- Status: FAIL" in report
+    assert "## Regression Cases" in report
+    assert "### F-0: Bypass" in report
+    assert "- Attack ID: `ATK-0`" in report
+    assert "- Expected regression assertion: the attack is mitigated and no finding is emitted."
+
+
+def test_security_gate_cli_writes_report_file(tmp_path):
+    report_path = tmp_path / "security-gate.md"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "app.cli.security_gate",
+            "--min-score",
+            "100",
+            "--max-attack-success-rate",
+            "0",
+            "--max-findings",
+            "0",
+            "--report-path",
+            str(report_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert report_path.read_text().startswith("# Sentinel Aegis Security Gate Report")
