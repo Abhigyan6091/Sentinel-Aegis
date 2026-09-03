@@ -4,6 +4,7 @@ from app.ai.providers import LLMProvider, create_llm_provider
 from app.core.identity import RequestIdentity
 from app.models.foundation import SecurityEvent, ToolCall
 from app.observability.service import record_support_response
+from app.rag.service import IngestedRagRetriever
 from app.schemas.support import (
     SupportChatRequest,
     SupportChatResponse,
@@ -33,7 +34,7 @@ class SupportAgent:
         tools: MockSupportTools | None = None,
     ) -> None:
         self.provider = provider or create_llm_provider()
-        self.retriever = retriever or LocalSupportRetriever()
+        self.retriever = retriever
         self.policy = policy or PolicyEngine.default()
         self.tools = tools or MockSupportTools()
         self.prompt_detector = PromptInjectionDetector()
@@ -80,7 +81,8 @@ class SupportAgent:
             await record_support_response(session, identity, response)
             return response
 
-        documents = await self.retriever.retrieve(payload.message, identity.tenant_id)
+        retriever = self.retriever or self._default_retriever(session)
+        documents = await retriever.retrieve(payload.message, identity.tenant_id)
         firewall_result = self.context_firewall.inspect(documents)
         trace.append(
             TraceStep(
@@ -184,6 +186,13 @@ class SupportAgent:
             )
         )
         await session.commit()
+
+    def _default_retriever(self, session: AsyncSession | None):
+        from app.core.config import get_settings
+
+        if get_settings().support_retriever == "rag" and session is not None:
+            return IngestedRagRetriever(session)
+        return LocalSupportRetriever()
 
     async def _record_event(
         self,

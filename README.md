@@ -93,6 +93,8 @@ Milestone 4 records support responses, campaign attack results, evaluation runs,
 - `POST /api/v1/red-team/campaigns`: run a bounded local red-team campaign.
 - `GET /api/v1/red-team/campaigns/latest`: latest tenant-scoped campaign result.
 - `GET /api/v1/red-team/findings`: findings created from observed successful attacks.
+- `POST /api/v1/rag/documents`: ingest a tenant-scoped RAG document.
+- `POST /api/v1/rag/search`: run tenant-scoped vector retrieval.
 - `GET /api/v1/observability/summary`: tenant-scoped runtime and evaluation counters.
 - `GET /api/v1/observability/traces`: latest tenant-scoped runtime traces.
 
@@ -147,6 +149,35 @@ AEGIS_LLM_MAX_RETRIES=2
 ```
 
 Provider responses are normalized into the existing runtime schema with content, provider name, model name, input tokens, and output tokens. Tests use mocked HTTP transports and do not require live provider keys.
+
+## RAG Ingestion And Retrieval
+
+Sentinel Aegis can ingest support documents, chunk them, generate deterministic local embeddings, and retrieve tenant-scoped context through a memory vector store for tests or Qdrant for production-like deployments.
+
+```bash
+AEGIS_SUPPORT_RETRIEVER=rag
+AEGIS_RAG_VECTOR_STORE=qdrant
+AEGIS_QDRANT_URL=http://qdrant:6333
+AEGIS_QDRANT_COLLECTION=sentinel_aegis_chunks
+```
+
+Example ingestion:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/rag/documents \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: dev-aegis-key' \
+  -d '{"source":"support-kb","content":"Warranty replacements require the device serial number.","trust_score":0.95}'
+```
+
+Example search:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/rag/search \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: dev-aegis-key' \
+  -d '{"query":"warranty serial number","limit":3}'
+```
 
 ## Local Setup
 
@@ -257,6 +288,7 @@ Current tests cover:
 - Authentication failures and success.
 - RS256 JWT validation, issuer/audience checks, disabled development API keys, role authorization, and JWT tenant isolation.
 - Local/OpenAI/Anthropic provider selection, provider config errors, HTTP response mapping, and retry failure behavior.
+- RAG document ingestion, deterministic embeddings, tenant-scoped vector search, Qdrant request mapping, and support-agent ingested-RAG mode.
 - In-memory rate limiting.
 - Tenant-scoped application isolation.
 - Enterprise Support Agent guardrails, tool authorization, and audit records.
@@ -268,7 +300,7 @@ Current tests cover:
 
 - The default LLM provider remains deterministic local mode, but OpenAI and Anthropic adapters are available for configured deployments.
 - Provider token usage is normalized, but durable cost analytics and per-tenant provider budgets are not implemented yet.
-- Qdrant is available but document ingestion, embeddings, and vector retrieval are not implemented yet.
+- Qdrant-backed retrieval is available through the HTTP vector-store abstraction, but embeddings are deterministic local vectors rather than model-generated embeddings.
 - OpenTelemetry instrumentation, Grafana dashboards, and Redpanda event streaming are not implemented yet.
 - Security-gate reports include regression case templates, but committing generated regression files is still manual.
 - Role claims are enforced by reusable helpers, but full organization membership management UI/API is not implemented yet.

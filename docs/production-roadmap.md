@@ -46,6 +46,8 @@ Exit criteria:
 
 Goal: replace local fixtures with a real document-ingestion and retrieval path.
 
+Status: core document ingestion, chunk metadata, deterministic embeddings, tenant-scoped retrieval, support-agent RAG mode, and a Qdrant-compatible HTTP vector store are implemented. Production embedding providers, ingestion jobs, and retention workflows remain future P3 expansion work.
+
 - Add document upload and ingestion APIs.
 - Add embedding provider abstraction.
 - Store chunks and metadata in PostgreSQL.

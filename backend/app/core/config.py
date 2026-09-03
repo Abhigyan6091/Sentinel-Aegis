@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-3-5-sonnet-latest"
     llm_timeout_seconds: float = 30
     llm_max_retries: int = 2
+    support_retriever: str = "fixture"
+    rag_vector_store: str = "memory"
+    qdrant_url: str = "http://qdrant:6333"
+    qdrant_collection: str = "sentinel_aegis_chunks"
+    embedding_dimensions: int = 32
+    rag_chunk_size: int = 700
+    rag_chunk_overlap: int = 100
     api_keys: dict[str, str] = Field(
         default_factory=lambda: {
             "tenant-demo": "dev-aegis-key",

@@ -150,6 +150,35 @@ class Trace(Base, TimestampMixin, TenantScopedMixin):
     spans: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
 
 
+class RagDocument(Base, TimestampMixin, TenantScopedMixin):
+    __tablename__ = "rag_documents"
+    __table_args__ = (Index("ix_rag_documents_tenant_source", "tenant_id", "source"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
+    application_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("applications.id"))
+    source: Mapped[str] = mapped_column(String(255), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    trust_score: Mapped[float] = mapped_column()
+    sensitivity: Mapped[str] = mapped_column(String(32), nullable=False, default="PUBLIC")
+    metadata_: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+
+
+class RagChunk(Base, TimestampMixin, TenantScopedMixin):
+    __tablename__ = "rag_chunks"
+    __table_args__ = (Index("ix_rag_chunks_tenant_document", "tenant_id", "document_id"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
+    document_id: Mapped[str] = mapped_column(String(64), ForeignKey("rag_documents.id"))
+    application_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("applications.id"))
+    source: Mapped[str] = mapped_column(String(255), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    embedding_model: Mapped[str] = mapped_column(String(128), nullable=False)
+    trust_score: Mapped[float] = mapped_column()
+    sensitivity: Mapped[str] = mapped_column(String(32), nullable=False, default="PUBLIC")
+    metadata_: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+
+
 class ToolCall(Base, TimestampMixin, TenantScopedMixin):
     __tablename__ = "tool_calls"
 
