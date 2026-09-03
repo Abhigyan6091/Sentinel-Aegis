@@ -1,3 +1,4 @@
+from asyncio import Lock
 from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import (
@@ -14,6 +15,7 @@ from app.models import foundation  # noqa: F401
 _engines: dict[str, AsyncEngine] = {}
 _sessionmakers: dict[str, async_sessionmaker[AsyncSession]] = {}
 _initialized_urls: set[str] = set()
+_schema_locks: dict[str, Lock] = {}
 
 
 def get_engine(settings: Settings | None = None) -> AsyncEngine:
@@ -38,9 +40,13 @@ async def ensure_schema(settings: Settings | None = None) -> None:
     if not settings.auto_create_schema or settings.database_url in _initialized_urls:
         return
 
-    async with get_engine(settings).begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    _initialized_urls.add(settings.database_url)
+    lock = _schema_locks.setdefault(settings.database_url, Lock())
+    async with lock:
+        if settings.database_url in _initialized_urls:
+            return
+        async with get_engine(settings).begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        _initialized_urls.add(settings.database_url)
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
