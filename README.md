@@ -95,6 +95,11 @@ Milestone 4 records support responses, campaign attack results, evaluation runs,
 - `GET /api/v1/red-team/findings`: findings created from observed successful attacks.
 - `POST /api/v1/rag/documents`: ingest a tenant-scoped RAG document.
 - `POST /api/v1/rag/search`: run tenant-scoped vector retrieval.
+- `GET /api/v1/policies`: list tenant-scoped policy versions.
+- `POST /api/v1/policies`: create a draft policy version.
+- `POST /api/v1/policies/{policy_id}/activate`: activate a policy version.
+- `GET /api/v1/approvals`: list high-risk tool approval requests.
+- `POST /api/v1/approvals/{approval_id}/decide`: approve or reject a tool request.
 - `GET /api/v1/observability/summary`: tenant-scoped runtime and evaluation counters.
 - `GET /api/v1/observability/traces`: latest tenant-scoped runtime traces.
 
@@ -178,6 +183,19 @@ curl -X POST http://localhost:8000/api/v1/rag/search \
   -H 'x-api-key: dev-aegis-key' \
   -d '{"query":"warranty serial number","limit":3}'
 ```
+
+## Policy Center And Approvals
+
+Policy documents can be created, versioned, activated, and used by the support-agent runtime. Active policy documents define tool risk, allowed roles, and whether explicit human approval is required.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/policies \
+  -H 'content-type: application/json' \
+  -H 'x-api-key: dev-aegis-key' \
+  -d '{"name":"Strict Tools","document":{"tools":{"refund_order":{"risk":"HIGH","allowed_roles":["admin"],"require_approval":true}}}}'
+```
+
+High-risk tool calls create pending approval requests instead of executing immediately. Use `/policies` and `/approvals` in the console to inspect configured policy versions and approval records.
 
 ## Local Setup
 
@@ -289,6 +307,7 @@ Current tests cover:
 - RS256 JWT validation, issuer/audience checks, disabled development API keys, role authorization, and JWT tenant isolation.
 - Local/OpenAI/Anthropic provider selection, provider config errors, HTTP response mapping, and retry failure behavior.
 - RAG document ingestion, deterministic embeddings, tenant-scoped vector search, Qdrant request mapping, and support-agent ingested-RAG mode.
+- Policy CRUD/versioning, activation, active-policy tool authorization, approval request creation, and approval decisions.
 - In-memory rate limiting.
 - Tenant-scoped application isolation.
 - Enterprise Support Agent guardrails, tool authorization, and audit records.
@@ -304,7 +323,7 @@ Current tests cover:
 - OpenTelemetry instrumentation, Grafana dashboards, and Redpanda event streaming are not implemented yet.
 - Security-gate reports include regression case templates, but committing generated regression files is still manual.
 - Role claims are enforced by reusable helpers, but full organization membership management UI/API is not implemented yet.
-- Policy CRUD, approval queues, role management UI, and per-application provider selection are not implemented yet.
+- Policy CRUD and approval queues are implemented; role management UI and per-application provider selection are not implemented yet.
 - High-risk actions such as refunds are simulated locally.
 
 ## Future Work

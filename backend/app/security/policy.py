@@ -46,6 +46,17 @@ class PolicyEngine:
             }
         )
 
+    @classmethod
+    def from_document(cls, document: dict) -> "PolicyEngine":
+        tools: dict[str, ToolPolicy] = {}
+        for tool_name, policy in document.get("tools", {}).items():
+            tools[tool_name] = ToolPolicy(
+                risk=Risk(str(policy.get("risk", Risk.MEDIUM.value))),
+                allowed_roles=[str(role) for role in policy.get("allowed_roles", [])],
+                require_approval=bool(policy.get("require_approval", False)),
+            )
+        return cls(tools=tools)
+
     def authorize_tool(
         self,
         tool_name: str,

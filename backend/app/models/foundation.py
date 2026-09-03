@@ -68,6 +68,7 @@ class Policy(Base, TimestampMixin, TenantScopedMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     document: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 
 class Guardrail(Base, TimestampMixin, TenantScopedMixin):
@@ -177,6 +178,21 @@ class RagChunk(Base, TimestampMixin, TenantScopedMixin):
     trust_score: Mapped[float] = mapped_column()
     sensitivity: Mapped[str] = mapped_column(String(32), nullable=False, default="PUBLIC")
     metadata_: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+
+
+class ApprovalRequest(Base, TimestampMixin, TenantScopedMixin):
+    __tablename__ = "approval_requests"
+    __table_args__ = (Index("ix_approval_requests_tenant_status", "tenant_id", "status"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=new_id)
+    request_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    application_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("applications.id"))
+    tool_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    arguments: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    risk: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class ToolCall(Base, TimestampMixin, TenantScopedMixin):

@@ -12,6 +12,7 @@ import {
   Route,
   Settings,
   Shield,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,6 +24,7 @@ const items = [
   { label: "Attack Explorer", href: "/attacks", icon: Bug },
   { label: "Findings", href: "/findings", icon: FileWarning },
   { label: "Policies", href: "/policies", icon: ClipboardList },
+  { label: "Approvals", href: "/approvals", icon: UserCheck },
   { label: "Traces", href: "/traces", icon: Route },
   { label: "Guardrails", href: "/guardrails", icon: ListChecks },
   { label: "Evaluations", href: "/evaluations", icon: BarChart3 },

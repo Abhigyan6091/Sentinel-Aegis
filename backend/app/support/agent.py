@@ -4,6 +4,7 @@ from app.ai.providers import LLMProvider, create_llm_provider
 from app.core.identity import RequestIdentity
 from app.models.foundation import SecurityEvent, ToolCall
 from app.observability.service import record_support_response
+from app.policies.service import active_policy_engine, record_approval_request
 from app.rag.service import IngestedRagRetriever
 from app.schemas.support import (
     SupportChatRequest,
@@ -35,7 +36,7 @@ class SupportAgent:
     ) -> None:
         self.provider = provider or create_llm_provider()
         self.retriever = retriever
-        self.policy = policy or PolicyEngine.default()
+        self.policy = policy
         self.tools = tools or MockSupportTools()
         self.prompt_detector = PromptInjectionDetector()
         self.pii_detector = PIIDetector()
@@ -98,13 +99,23 @@ class SupportAgent:
             firewall_result.allowed_context,
         )
         tool_calls: list[ToolCallAudit] = []
+        policy_engine = self.policy or await active_policy_engine(session, identity)
         for tool_request in llm_response.tool_requests:
-            policy_decision = self.policy.authorize_tool(
+            policy_decision = policy_engine.authorize_tool(
                 tool_request.tool_name,
                 identity.roles,
                 identity.tenant_id,
             )
             audit = policy_to_tool_audit(policy_decision, tool_request.tool_name)
+            if policy_decision.decision == Decision.REQUIRE_APPROVAL:
+                await record_approval_request(
+                    session,
+                    identity,
+                    identity.request_id,
+                    tool_request.tool_name,
+                    tool_request.arguments,
+                    policy_decision.risk.value,
+                )
             if policy_decision.decision == Decision.ALLOW:
                 result = await self.tools.execute(tool_request.tool_name, tool_request.arguments)
                 audit.executed = True

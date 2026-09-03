@@ -66,6 +66,8 @@ Exit criteria:
 
 Goal: make runtime policy configurable and auditable.
 
+Status: core policy CRUD/versioning, activation, active-policy tool authorization, approval-request persistence, approval decisions, and console pages are implemented. OPA/Rego, full role-management UI, and execution-after-approval workflows remain future P4 expansion work.
+
 - Add policy CRUD APIs.
 - Add policy versioning and activation controls.
 - Add approval queue models and APIs for high-risk tool actions.

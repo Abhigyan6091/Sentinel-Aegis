@@ -157,6 +157,42 @@ export type TraceRecord = {
   created_at: string;
 };
 
+export type PolicyRecord = {
+  id: string;
+  tenant_id: string;
+  application_id: string | null;
+  name: string;
+  document: {
+    tools?: Record<
+      string,
+      {
+        risk?: string;
+        allowed_roles?: string[];
+        require_approval?: boolean;
+      }
+    >;
+  };
+  status: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApprovalRecord = {
+  id: string;
+  tenant_id: string;
+  request_id: string;
+  application_id: string | null;
+  tool_name: string;
+  arguments: Record<string, string>;
+  risk: string;
+  status: string;
+  decision_reason: string | null;
+  decided_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export async function getHealth(): Promise<HealthResponse | null> {
   try {
     const response = await fetch(`${API_BASE_URL}/health`, { cache: "no-store" });
@@ -296,6 +332,36 @@ export async function getObservabilitySummary(): Promise<ObservabilitySummary> {
 export async function getTraces(): Promise<TraceRecord[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/observability/traces`, {
+      cache: "no-store",
+      headers: { "x-api-key": API_KEY },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return response.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function getPolicies(): Promise<PolicyRecord[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/policies`, {
+      cache: "no-store",
+      headers: { "x-api-key": API_KEY },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return response.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function getApprovals(): Promise<ApprovalRecord[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/approvals`, {
       cache: "no-store",
       headers: { "x-api-key": API_KEY },
     });
