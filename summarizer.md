@@ -157,11 +157,29 @@ overall = round(100 * (1 - attack_success_rate))
 - Updated the main dashboard to show live summary counters instead of empty placeholders.
 - Updated visible frontend branding from AegisAI to Sentinel Aegis in the main shell.
 
+### Milestone 5: CI/CD Polish
+
+- Added a deterministic security-gate evaluator.
+- Added threshold checks for:
+  - minimum overall security score
+  - maximum attack success rate
+  - maximum finding count
+- Added CLI command:
+
+```bash
+python -m app.cli.security_gate --min-score 100 --max-attack-success-rate 0 --max-findings 0
+```
+
+- Added JSON output for security-gate results.
+- Wired the adversarial security gate into GitHub Actions after backend tests.
+- Added tests for gate pass/fail behavior and CLI output.
+- Added the Milestone 5 implementation plan under `docs/superpowers/plans/`.
+
 ## Current Verification Status
 
 The latest completed verification before this summary showed:
 
-- Backend tests: `28 passed`
+- Backend tests: `31 passed`
 - Backend lint: passed
 - Frontend lint: passed
 - Frontend typecheck: passed
@@ -173,6 +191,11 @@ The latest completed verification before this summary showed:
   - score `100`
   - `5` attacks executed
   - `0` successful attacks
+- CI security gate:
+  - exit code `0`
+  - score `100`
+  - `0` findings
+  - `0.0` attack success rate
 
 ## What Has Not Been Implemented Yet
 
@@ -229,10 +252,8 @@ The latest completed verification before this summary showed:
 
 ### CI/CD Security Gate
 
-- Basic GitHub Actions CI exists.
-- The adversarial security gate is not implemented.
-- Threshold enforcement is not implemented.
 - Regression conversion for discovered vulnerabilities is not automated.
+- Historical security-gate reports are not uploaded as CI artifacts yet.
 
 ### Benchmark Mode
 
@@ -253,15 +274,19 @@ The latest completed verification before this summary showed:
 - Tenant isolation is logical and covered by tests for current APIs, but not comprehensively enforced across every future object.
 - No deployment manifests beyond local Docker Compose exist.
 
-## Recommended Next Milestones
+## Recommended Next Work
 
-1. Milestone 5: CI/CD Polish
-   - Add adversarial security gate command.
-   - Add configurable thresholds.
-   - Add regression suite wiring.
-   - Add final demo seed data and polish the README.
-
-2. Provider And RAG Expansion
+1. Provider And RAG Expansion
    - Add OpenAI/Anthropic providers behind the existing provider interface.
    - Add Qdrant-backed document ingestion and retrieval.
    - Keep the deterministic local provider as the default fallback.
+
+2. Regression Automation
+   - Convert findings into durable regression tests.
+   - Save CI gate reports as artifacts.
+   - Add before/after benchmark comparison runs.
+
+3. Product Depth
+   - Add policy CRUD and approval workflows.
+   - Add OpenTelemetry/Grafana dashboards.
+   - Add production-grade auth and deployment manifests.

@@ -2,7 +2,7 @@
 
 Sentinel Aegis is a local, portfolio-grade AI application security and red-teaming platform. It is designed to demonstrate practical controls for prompt injection, jailbreaks, RAG poisoning, tool abuse, data leakage, policy enforcement, observability, and security scoring.
 
-This repository is intentionally incremental. Milestone 1 builds the foundation: a FastAPI backend, tenant-aware persistence, authentication, rate limiting primitives, a Next.js security console, Docker Compose infrastructure, CI, and documentation. Milestone 2 adds the deterministic Enterprise Support Agent demo with runtime guardrails, context firewall checks, tool authorization, mock tools, and audit records. Milestone 3 adds deterministic red-team campaigns that send adversarial traffic through the same runtime pipeline and calculate measured scores. Milestone 4 adds live observability APIs, Prometheus counters, persisted traces/results, and operational dashboard pages.
+This repository is intentionally incremental. Milestone 1 builds the foundation: a FastAPI backend, tenant-aware persistence, authentication, rate limiting primitives, a Next.js security console, Docker Compose infrastructure, CI, and documentation. Milestone 2 adds the deterministic Enterprise Support Agent demo with runtime guardrails, context firewall checks, tool authorization, mock tools, and audit records. Milestone 3 adds deterministic red-team campaigns that send adversarial traffic through the same runtime pipeline and calculate measured scores. Milestone 4 adds live observability APIs, Prometheus counters, persisted traces/results, and operational dashboard pages. Milestone 5 adds the deterministic adversarial CI security gate.
 
 ## Why AI Applications Need Security
 
@@ -29,7 +29,7 @@ Qdrant, Redpanda, Prometheus, and Grafana are available in Docker Compose. Prome
 2. Secure Demo App: LLM provider abstraction, vulnerable Enterprise Support Agent, Qdrant-backed RAG, mock tools, runtime guardrails, policy evaluation, context firewall, tool authorization, and audit logs.
 3. Red-Team Evaluation: attack taxonomy, generator, mutator, campaigns, traces, evaluator, findings, metrics, scoring, deterministic demo scenarios, and benchmark mode.
 4. Observability Dashboard: persisted trace records, Prometheus metrics, summary APIs, dashboard pages, attack explorer, findings, and trace views.
-5. CI/CD Polish: security gate workflow, regression suites, threshold enforcement, final demo story, seed data, performance tuning, and UX polish.
+5. CI/CD Polish: deterministic security gate command, threshold enforcement, GitHub Actions wiring, final demo story, and documentation polish.
 
 ## Runtime Security Flow
 
@@ -162,6 +162,17 @@ Example metrics scrape:
 curl http://localhost:8000/metrics
 ```
 
+## CI Security Gate
+
+The backend includes a deterministic adversarial security gate that runs the local red-team campaign and fails if thresholds are missed.
+
+```bash
+cd backend
+python -m app.cli.security_gate --min-score 100 --max-attack-success-rate 0 --max-findings 0
+```
+
+The GitHub Actions backend job runs the same command after tests. The default gate does not require Docker, Postgres, Redis, Qdrant, external LLM providers, or API keys.
+
 ## Backend Development
 
 Docker and CI use Python 3.12. This machine currently has Python 3.10, and the backend tests still run locally with compatible dependencies.
@@ -202,15 +213,17 @@ Current tests cover:
 - Enterprise Support Agent guardrails, tool authorization, and audit records.
 - Red-team attack catalog, campaign execution, findings, and scoring.
 - Observability summary/traces, tenant scoping, Prometheus metrics, and campaign persistence.
+- CI security-gate pass/fail threshold logic and CLI JSON output.
 
 ## Limitations
 
 - The current LLM provider, guardrails, evaluator, and RAG fixtures are deterministic local implementations.
 - Qdrant is available but document ingestion, embeddings, and vector retrieval are not implemented yet.
 - OpenTelemetry instrumentation, Grafana dashboards, and Redpanda event streaming are not implemented yet.
+- Regression files generated from findings are not automated yet.
 - Policy CRUD, approval queues, role management UI, and provider selection are not implemented yet.
 - High-risk actions such as refunds are simulated locally.
 
 ## Future Work
 
-The next milestone should add CI/CD polish: an adversarial security gate command, threshold enforcement, regression-suite wiring, seed data, and final demo refinements.
+Next expansion work should focus on provider/RAG depth, automated regression generation from findings, policy-center CRUD, approval workflows, OpenTelemetry/Grafana dashboards, and production-grade auth.
