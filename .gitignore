@@ -21,3 +21,5 @@ venv/
 
 .DS_Store
 .worktrees/
+
+summarizer.md
