@@ -54,6 +54,86 @@ export type SupportChatResponse = {
   };
 };
 
+export type AttackSeed = {
+  seed_id: string;
+  category: string;
+  severity: string;
+  payload: string;
+  expected_behavior: string;
+  metadata: Record<string, string>;
+};
+
+export type Finding = {
+  finding_id: string;
+  severity: string;
+  title: string;
+  attack_id: string;
+  category: string;
+  affected_component: string;
+  description: string;
+  impact: string;
+  root_cause: string;
+  recommendation: string;
+  status: string;
+};
+
+export type CampaignRunResponse = {
+  campaign: {
+    campaign_id: string;
+    tenant_id: string;
+    application_id: string | null;
+    name: string;
+    status: string;
+    attack_count: number;
+    mutation_depth: number;
+    started_at: string;
+    completed_at: string | null;
+  };
+  score: {
+    overall: number;
+    prompt_security: number;
+    rag_security: number;
+    agent_security: number;
+    data_security: number;
+    availability: number;
+    attack_success_rate: number;
+    detection_rate: number;
+    false_positive_rate: number;
+    false_negative_rate: number;
+    attacks_executed: number;
+    successful_attacks: number;
+  };
+  results: Array<{
+    variant: {
+      attack_id: string;
+      seed_id: string;
+      category: string;
+      severity: string;
+      payload: string;
+      expected_behavior: string;
+      parent_attack_id: string | null;
+      mutation_strategy: string;
+      metadata: Record<string, string>;
+    };
+    evaluation: {
+      attack_id: string;
+      category: string;
+      severity: string;
+      blocked: boolean;
+      allowed: boolean;
+      successful_attack: boolean;
+      false_positive: boolean;
+      false_negative: boolean;
+      detection_signals: string[];
+      latency_ms: number;
+      tokens: Record<string, number>;
+      finding: Finding | null;
+    };
+    trace: Array<{ component: string; decision: string; reason: string }>;
+  }>;
+  findings: Finding[];
+};
+
 export async function getHealth(): Promise<HealthResponse | null> {
   try {
     const response = await fetch(`${API_BASE_URL}/health`, { cache: "no-store" });
@@ -98,4 +178,70 @@ export async function sendSupportMessage(message: string): Promise<SupportChatRe
   }
 
   return response.json();
+}
+
+export async function runCampaign(): Promise<CampaignRunResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/red-team/campaigns`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": API_KEY,
+    },
+    body: JSON.stringify({
+      name: "Deterministic Demo Campaign",
+      attack_count: 5,
+      mutation_depth: 2,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Campaign request failed with ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function getLatestCampaign(): Promise<CampaignRunResponse | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/red-team/campaigns/latest`, {
+      cache: "no-store",
+      headers: { "x-api-key": API_KEY },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function getAttackCatalog(): Promise<AttackSeed[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/red-team/attacks`, {
+      cache: "no-store",
+      headers: { "x-api-key": API_KEY },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return response.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function getFindings(): Promise<Finding[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/red-team/findings`, {
+      cache: "no-store",
+      headers: { "x-api-key": API_KEY },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return response.json();
+  } catch {
+    return [];
+  }
 }
