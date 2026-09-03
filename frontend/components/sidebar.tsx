@@ -40,7 +40,7 @@ export function Sidebar() {
               <Gauge className="h-5 w-5 text-console-teal" aria-hidden />
             </div>
             <div>
-              <p className="text-base font-semibold">AegisAI</p>
+              <p className="text-base font-semibold">Sentinel Aegis</p>
               <p className="text-xs text-console-muted">Security Platform</p>
             </div>
           </div>

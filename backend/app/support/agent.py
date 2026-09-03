@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.providers import LLMProvider, LocalProvider
 from app.core.identity import RequestIdentity
 from app.models.foundation import SecurityEvent, ToolCall
+from app.observability.service import record_support_response
 from app.schemas.support import (
     SupportChatRequest,
     SupportChatResponse,
@@ -64,7 +65,7 @@ class SupportAgent:
                 Risk.CRITICAL,
                 {"message": "blocked"},
             )
-            return SupportChatResponse(
+            response = SupportChatResponse(
                 request_id=identity.request_id,
                 answer="Request blocked by Sentinel Aegis input guardrails.",
                 decision=Decision.BLOCK,
@@ -76,6 +77,8 @@ class SupportAgent:
                 trace=trace,
                 tokens={"input": 0, "output": 0},
             )
+            await record_support_response(session, identity, response)
+            return response
 
         documents = await self.retriever.retrieve(payload.message, identity.tenant_id)
         firewall_result = self.context_firewall.inspect(documents)
@@ -123,6 +126,13 @@ class SupportAgent:
             answer = f"{answer} Human approval is required before this tool can run."
 
         if output_guardrail.decision == Decision.SANITIZE:
+            await self._record_event(
+                session,
+                identity,
+                "PII_REDACTED",
+                output_guardrail.risk,
+                {"guardrail": output_guardrail.guardrail},
+            )
             trace.append(
                 TraceStep(
                     component="output_guardrail",
@@ -139,7 +149,7 @@ class SupportAgent:
             {"decision": decision.value, "tool_calls": str(len(tool_calls))},
         )
 
-        return SupportChatResponse(
+        response = SupportChatResponse(
             request_id=identity.request_id,
             answer=answer,
             decision=decision,
@@ -151,6 +161,8 @@ class SupportAgent:
             trace=trace,
             tokens={"input": llm_response.input_tokens, "output": llm_response.output_tokens},
         )
+        await record_support_response(session, identity, response)
+        return response
 
     async def _record_tool_call(
         self,

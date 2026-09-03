@@ -127,11 +127,41 @@ overall = round(100 * (1 - attack_success_rate))
 - Added campaign metrics display based on real API responses.
 - Added finding creation model for successful attacks, though the current deterministic defensive campaign produces no findings because all included attacks are mitigated.
 
+### Milestone 4: Observability Dashboard
+
+- Added Prometheus metrics support through `GET /metrics`.
+- Added runtime counters for:
+  - requests
+  - guardrail blocks
+  - campaigns
+  - attack outcomes
+- Persisted support-agent trace spans to the `traces` table.
+- Persisted red-team campaign output to durable tables:
+  - `applications`
+  - `attack_campaigns`
+  - `attacks`
+  - `attack_results`
+  - `evaluation_runs`
+  - `findings`
+- Added tenant-scoped observability APIs:
+  - `GET /api/v1/observability/summary`
+  - `GET /api/v1/observability/traces`
+- Added backend observability tests for:
+  - support trace persistence
+  - tenant-scoped summaries
+  - metrics export
+  - campaign result persistence
+- Added frontend pages:
+  - `/observability`
+  - `/traces`
+- Updated the main dashboard to show live summary counters instead of empty placeholders.
+- Updated visible frontend branding from AegisAI to Sentinel Aegis in the main shell.
+
 ## Current Verification Status
 
 The latest completed verification before this summary showed:
 
-- Backend tests: `24 passed`
+- Backend tests: `28 passed`
 - Backend lint: passed
 - Frontend lint: passed
 - Frontend typecheck: passed
@@ -185,27 +215,17 @@ The latest completed verification before this summary showed:
 - Policy editing UI is not implemented.
 - Policy versioning/audit UI is not implemented.
 
-### Persistent Campaign Storage
-
-- The red-team campaign runner currently keeps campaign history in process memory.
-- Campaign results are not fully persisted to the database tables yet.
-- Findings from campaigns are returned from in-memory campaign history, not a durable vulnerability-management workflow.
-
 ### Observability
 
 - OpenTelemetry instrumentation is not implemented.
-- `/metrics` endpoint is not implemented.
-- Prometheus is configured but cannot yet scrape real Sentinel Aegis app metrics.
 - Grafana datasource provisioning exists, but dashboards are not implemented.
 - Redpanda is available in Docker Compose but not actively used for event streaming.
 
 ### Dashboard Depth
 
-- Dashboard metrics are still mostly empty states.
-- Trend charts are not implemented.
+- Trend charts are simple current-state charts, not time-series analytics yet.
 - React Flow attack-path visualization is not implemented.
-- Detailed trace explorer is not implemented.
-- Guardrails, Evaluations, Observability, Policies, and Settings pages are not implemented beyond navigation.
+- Guardrails, Evaluations, Policies, and Settings pages are not implemented beyond navigation.
 
 ### CI/CD Security Gate
 
@@ -235,19 +255,13 @@ The latest completed verification before this summary showed:
 
 ## Recommended Next Milestones
 
-1. Milestone 4: Observability Dashboard
-   - Add OpenTelemetry spans.
-   - Add Prometheus `/metrics`.
-   - Persist security events and attack results.
-   - Add dashboard charts, trace explorer, and attack-path visualization.
-
-2. Milestone 5: CI/CD Polish
+1. Milestone 5: CI/CD Polish
    - Add adversarial security gate command.
    - Add configurable thresholds.
    - Add regression suite wiring.
    - Add final demo seed data and polish the README.
 
-3. Provider And RAG Expansion
+2. Provider And RAG Expansion
    - Add OpenAI/Anthropic providers behind the existing provider interface.
    - Add Qdrant-backed document ingestion and retrieval.
    - Keep the deterministic local provider as the default fallback.

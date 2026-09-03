@@ -134,6 +134,29 @@ export type CampaignRunResponse = {
   findings: Finding[];
 };
 
+export type ObservabilitySummary = {
+  request_count: number;
+  security_events: number;
+  attack_results: number;
+  campaigns: number;
+  findings: number;
+  guardrail_blocks: number;
+  pii_redactions: number;
+  latest_score: number;
+};
+
+export type TraceRecord = {
+  id: string;
+  request_id: string;
+  application_id: string | null;
+  spans: Array<{
+    component: string;
+    decision: string;
+    reason: string;
+  }>;
+  created_at: string;
+};
+
 export async function getHealth(): Promise<HealthResponse | null> {
   try {
     const response = await fetch(`${API_BASE_URL}/health`, { cache: "no-store" });
@@ -234,6 +257,45 @@ export async function getAttackCatalog(): Promise<AttackSeed[]> {
 export async function getFindings(): Promise<Finding[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/red-team/findings`, {
+      cache: "no-store",
+      headers: { "x-api-key": API_KEY },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    return response.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function getObservabilitySummary(): Promise<ObservabilitySummary> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/observability/summary`, {
+      cache: "no-store",
+      headers: { "x-api-key": API_KEY },
+    });
+    if (!response.ok) {
+      throw new Error("summary unavailable");
+    }
+    return response.json();
+  } catch {
+    return {
+      request_count: 0,
+      security_events: 0,
+      attack_results: 0,
+      campaigns: 0,
+      findings: 0,
+      guardrail_blocks: 0,
+      pii_redactions: 0,
+      latest_score: 0,
+    };
+  }
+}
+
+export async function getTraces(): Promise<TraceRecord[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/observability/traces`, {
       cache: "no-store",
       headers: { "x-api-key": API_KEY },
     });

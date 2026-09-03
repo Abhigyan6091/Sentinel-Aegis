@@ -2,7 +2,7 @@
 
 Sentinel Aegis is a local, portfolio-grade AI application security and red-teaming platform. It is designed to demonstrate practical controls for prompt injection, jailbreaks, RAG poisoning, tool abuse, data leakage, policy enforcement, observability, and security scoring.
 
-This repository is intentionally incremental. Milestone 1 builds the foundation: a FastAPI backend, tenant-aware persistence, authentication, rate limiting primitives, a Next.js security console, Docker Compose infrastructure, CI, and documentation. Milestone 2 adds the deterministic Enterprise Support Agent demo with runtime guardrails, context firewall checks, tool authorization, mock tools, and audit records. Milestone 3 adds deterministic red-team campaigns that send adversarial traffic through the same runtime pipeline and calculate measured scores.
+This repository is intentionally incremental. Milestone 1 builds the foundation: a FastAPI backend, tenant-aware persistence, authentication, rate limiting primitives, a Next.js security console, Docker Compose infrastructure, CI, and documentation. Milestone 2 adds the deterministic Enterprise Support Agent demo with runtime guardrails, context firewall checks, tool authorization, mock tools, and audit records. Milestone 3 adds deterministic red-team campaigns that send adversarial traffic through the same runtime pipeline and calculate measured scores. Milestone 4 adds live observability APIs, Prometheus counters, persisted traces/results, and operational dashboard pages.
 
 ## Why AI Applications Need Security
 
@@ -21,14 +21,14 @@ flowchart LR
   Frontend[Next.js Console] --> Gateway
 ```
 
-Milestone 1 keeps Qdrant, Redpanda, Prometheus, and Grafana available in Docker Compose without pretending to use them before their product flows exist.
+Qdrant, Redpanda, Prometheus, and Grafana are available in Docker Compose. Prometheus can now scrape the backend `/metrics` endpoint; Qdrant, Redpanda, and Grafana dashboard provisioning remain expansion points.
 
 ## Reduced Roadmap
 
 1. Foundation: monorepo, local infrastructure, backend identity, persistence, first frontend shell, CI basics.
 2. Secure Demo App: LLM provider abstraction, vulnerable Enterprise Support Agent, Qdrant-backed RAG, mock tools, runtime guardrails, policy evaluation, context firewall, tool authorization, and audit logs.
 3. Red-Team Evaluation: attack taxonomy, generator, mutator, campaigns, traces, evaluator, findings, metrics, scoring, deterministic demo scenarios, and benchmark mode.
-4. Observability Dashboard: OpenTelemetry spans, Prometheus metrics, Grafana dashboards, event streaming, dashboard pages, attack explorer, findings, policies, traces, and visual attack paths.
+4. Observability Dashboard: persisted trace records, Prometheus metrics, summary APIs, dashboard pages, attack explorer, findings, and trace views.
 5. CI/CD Polish: security gate workflow, regression suites, threshold enforcement, final demo story, seed data, performance tuning, and UX polish.
 
 ## Runtime Security Flow
@@ -62,10 +62,29 @@ flowchart TD
 
 The red-team engine arrives in Milestone 3. The important rule remains: attacks must pass through the same runtime path as real traffic.
 
+## Observability Flow
+
+```mermaid
+flowchart TD
+  Runtime[Support Agent Runtime] --> Events[Security Events]
+  Runtime --> Traces[Trace Records]
+  Campaign[Red-Team Campaign] --> Results[Attack Results]
+  Campaign --> Scores[Evaluation Runs]
+  Events --> Summary[Observability Summary API]
+  Traces --> Summary
+  Results --> Summary
+  Scores --> Summary
+  Summary --> Console[Next.js Console]
+  Metrics[Prometheus Counters] --> Prometheus[(Prometheus)]
+```
+
+Milestone 4 records support responses, campaign attack results, evaluation runs, findings, and trace spans into tenant-scoped database tables. It also exposes Prometheus counters for requests, guardrail blocks, campaigns, and attack outcomes.
+
 ## Current API
 
 - `GET /health`: liveness.
 - `GET /ready`: readiness.
+- `GET /metrics`: Prometheus metrics export.
 - `GET /api/v1/me`: authenticated identity context.
 - `GET /api/v1/applications`: tenant-scoped application list.
 - `POST /api/v1/applications`: tenant-scoped application registration.
@@ -74,6 +93,8 @@ The red-team engine arrives in Milestone 3. The important rule remains: attacks 
 - `POST /api/v1/red-team/campaigns`: run a bounded local red-team campaign.
 - `GET /api/v1/red-team/campaigns/latest`: latest tenant-scoped campaign result.
 - `GET /api/v1/red-team/findings`: findings created from observed successful attacks.
+- `GET /api/v1/observability/summary`: tenant-scoped runtime and evaluation counters.
+- `GET /api/v1/observability/traces`: latest tenant-scoped runtime traces.
 
 Development API keys:
 
@@ -129,6 +150,18 @@ overall = round(100 * (1 - attack_success_rate))
 
 Category sub-scores report prompt, RAG, agent, data, and availability posture separately. Untested categories are shown as 100 only in their sub-score, while the overall score is based on attacks actually executed in the campaign. Evaluations use structured signals including request blocking, guardrail decisions, context-firewall isolation, tool authorization decisions, and PII sanitization.
 
+## Observability Demo
+
+Open `http://localhost:3000/observability` in Docker Compose, or `http://localhost:3002/observability` on the local dev server. The page shows live tenant-scoped counters for requests, guardrail blocks, PII redactions, campaigns, attack results, findings, and the latest security score.
+
+Open `http://localhost:3000/traces` to inspect persisted runtime trace spans. Generate data by running support prompts or a red-team campaign.
+
+Example metrics scrape:
+
+```bash
+curl http://localhost:8000/metrics
+```
+
 ## Backend Development
 
 Docker and CI use Python 3.12. This machine currently has Python 3.10, and the backend tests still run locally with compatible dependencies.
@@ -166,13 +199,18 @@ Current tests cover:
 - Authentication failures and success.
 - In-memory rate limiting.
 - Tenant-scoped application isolation.
+- Enterprise Support Agent guardrails, tool authorization, and audit records.
+- Red-team attack catalog, campaign execution, findings, and scoring.
+- Observability summary/traces, tenant scoping, Prometheus metrics, and campaign persistence.
 
 ## Limitations
 
-- No LLM provider, support agent, RAG, tool execution, guardrail detector, attack runner, evaluator, security scoring, OpenTelemetry, or Grafana dashboard is implemented yet.
-- The frontend shows real backend health and application state, while security metrics remain empty states until evaluation data exists.
-- High-risk actions such as refunds and emails will be simulated locally in later milestones.
+- The current LLM provider, guardrails, evaluator, and RAG fixtures are deterministic local implementations.
+- Qdrant is available but document ingestion, embeddings, and vector retrieval are not implemented yet.
+- OpenTelemetry instrumentation, Grafana dashboards, and Redpanda event streaming are not implemented yet.
+- Policy CRUD, approval queues, role management UI, and provider selection are not implemented yet.
+- High-risk actions such as refunds are simulated locally.
 
 ## Future Work
 
-The next milestone should add the Enterprise Support Agent with a deterministic local LLM provider, Qdrant-backed documents, mocked tools, and intentionally configurable vulnerabilities so the runtime defenses have a real target to protect.
+The next milestone should add CI/CD polish: an adversarial security gate command, threshold enforcement, regression-suite wiring, seed data, and final demo refinements.

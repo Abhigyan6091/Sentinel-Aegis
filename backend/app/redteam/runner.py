@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity import RequestIdentity
+from app.observability.service import record_campaign_result
 from app.redteam.attacks import AttackGenerator
 from app.redteam.evaluator import SecurityEvaluator
 from app.redteam.scoring import SecurityScorer
@@ -102,4 +103,5 @@ class CampaignRunner:
             findings=findings,
         )
         campaign_store.add(identity.tenant_id, response)
+        await record_campaign_result(session, identity, response)
         return response

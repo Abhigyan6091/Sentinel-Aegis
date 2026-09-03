@@ -1,12 +1,12 @@
 import { Activity, AlertTriangle, Gauge, ShieldCheck } from "lucide-react";
 
 import { StatusCard } from "@/components/status-card";
-import { getHealth } from "@/lib/api";
+import { getHealth, getObservabilitySummary } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const health = await getHealth();
+  const [health, summary] = await Promise.all([getHealth(), getObservabilitySummary()]);
 
   return (
     <div className="space-y-6">
@@ -16,7 +16,7 @@ export default async function DashboardPage() {
             Runtime foundation
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-normal text-console-text">
-            AegisAI Security Console
+            Sentinel Aegis Security Console
           </h1>
         </div>
         <div className="rounded-lg border border-console-line px-3 py-2 text-sm text-console-muted">
@@ -31,30 +31,30 @@ export default async function DashboardPage() {
         <StatusCard
           icon={ShieldCheck}
           label="Security Score"
-          value="No run"
+          value={summary.latest_score ? `${summary.latest_score}` : "No run"}
           tone="teal"
-          detail="Waiting for the evaluation engine"
+          detail="Latest persisted red-team score"
         />
         <StatusCard
           icon={AlertTriangle}
           label="Critical Findings"
-          value="No data"
+          value={`${summary.findings}`}
           tone="red"
-          detail="Findings arrive after red-team campaigns"
+          detail="Open findings created by campaigns"
         />
         <StatusCard
           icon={Activity}
           label="Guardrail Blocks"
-          value="No data"
+          value={`${summary.guardrail_blocks}`}
           tone="amber"
-          detail="Runtime guardrails arrive in Milestone 2"
+          detail="Prompt injection requests stopped"
         />
         <StatusCard
           icon={Gauge}
-          label="P95 Latency"
-          value="No data"
+          label="Runtime Traces"
+          value={`${summary.request_count}`}
           tone="green"
-          detail="Metrics arrive with observability"
+          detail="Persisted support and campaign traces"
         />
       </section>
 
@@ -67,8 +67,8 @@ export default async function DashboardPage() {
               empty until real evaluators generate them.
             </p>
           </div>
-          <div className="hidden rounded-full border border-console-teal/40 px-3 py-1 text-sm text-console-teal sm:block">
-            Milestone 1
+          <div className="hidden rounded-lg border border-console-teal/40 px-3 py-1 text-sm text-console-teal sm:block">
+            Milestone 4
           </div>
         </div>
       </section>
