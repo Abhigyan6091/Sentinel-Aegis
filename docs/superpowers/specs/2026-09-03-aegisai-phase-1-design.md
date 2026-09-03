@@ -4,11 +4,11 @@ Date: 2026-09-03
 
 ## Purpose
 
-Phase 1 creates the local foundation for AegisAI, a production-oriented AI application security and red-teaming platform. This phase does not attempt to implement the full runtime guardrail system or red-team engine. It establishes a runnable monorepo, core service boundaries, local infrastructure, identity primitives, persistence, and the first dashboard shell so later phases can add security behavior without reworking the base.
+Milestone 1 creates the local foundation for AegisAI, a production-oriented AI application security and red-teaming platform. This milestone does not attempt to implement the full runtime guardrail system or red-team engine. It establishes a runnable monorepo, core service boundaries, local infrastructure, identity primitives, persistence, and the first dashboard shell so later milestones can add security behavior without reworking the base.
 
 ## Scope
 
-Phase 1 includes:
+Milestone 1 includes:
 
 - A monorepo layout for backend, frontend, infrastructure, documentation, and CI.
 - A FastAPI backend with typed configuration, health endpoints, request identity extraction, basic authentication, and database connectivity.
@@ -20,7 +20,7 @@ Phase 1 includes:
 - `.env.example`, project README, and GitHub Actions for backend and frontend checks.
 - Focused tests for configuration, authentication, tenant-aware model fields, and rate limiting.
 
-Phase 1 excludes:
+Milestone 1 excludes:
 
 - Real LLM provider calls.
 - RAG ingestion/retrieval behavior.
@@ -76,7 +76,7 @@ Core modules:
 
 - `app/core/config.py`: Pydantic settings loaded from environment variables.
 - `app/core/identity.py`: request identity model containing `request_id`, `user_id`, `tenant_id`, `application_id`, and roles.
-- `app/core/security.py`: API-key/JWT-style authentication dependency. Phase 1 accepts configured development API keys and a simple bearer-token shape from env; provider-specific identity integrations are outside this phase.
+- `app/core/security.py`: API-key/JWT-style authentication dependency. Milestone 1 accepts configured development API keys and a simple bearer-token shape from env; provider-specific identity integrations are outside this milestone.
 - `app/db/session.py`: async SQLAlchemy engine/session creation.
 - `app/models/`: ORM models with tenant fields where applicable.
 - `app/services/rate_limit.py`: interface and Redis implementation with test fallback.
@@ -108,7 +108,7 @@ Migrations are the source of truth. The application must not rely on manually cr
 
 ## Frontend Architecture
 
-The frontend will use Next.js with TypeScript and Tailwind CSS. shadcn/ui-compatible component structure will be prepared, but Phase 1 will keep dependencies practical and only add components needed for the shell.
+The frontend will use Next.js with TypeScript and Tailwind CSS. shadcn/ui-compatible component structure will be prepared, but Milestone 1 will keep dependencies practical and only add components needed for the shell.
 
 First screen:
 
@@ -131,7 +131,7 @@ The UI must look like a focused security operations product, not a marketing lan
 - `prometheus`: reserved for metrics scraping.
 - `grafana`: reserved for dashboards.
 
-Services that are not actively used in Phase 1 should still start with stable defaults, but application code should not pretend to use them before their phase arrives.
+Services that are not actively used in Milestone 1 should still start with stable defaults, but application code should not pretend to use them before their milestone arrives.
 
 ## Configuration
 
@@ -153,11 +153,11 @@ GitHub Actions will run:
 - Backend install, lint, and tests.
 - Frontend install, lint, typecheck, and build.
 
-The AegisAI security gate will be introduced in Phase 10 after the red-team engine and evaluation runner exist.
+The AegisAI security gate will be introduced in Milestone 5 after the red-team engine and evaluation runner exist.
 
 ## Testing Strategy
 
-Phase 1 tests focus on behavior that can regress quickly:
+Milestone 1 tests focus on behavior that can regress quickly:
 
 - Settings load required defaults and environment overrides.
 - Auth rejects missing/invalid credentials and returns identity for valid credentials.
@@ -169,14 +169,14 @@ Tests should use deterministic local dependencies where possible. Redis/Postgres
 
 ## Risks And Tradeoffs
 
-- The brief requests many infrastructure components. Phase 1 will include compose services for the required stack but only wire application code to Postgres and Redis initially. This keeps the setup honest and avoids fake integrations.
-- JWT-style auth in Phase 1 is intentionally simple. It provides identifiable request context without committing to an enterprise identity provider too early.
+- The brief requests many infrastructure components. Milestone 1 will include compose services for the required stack but only wire application code to Postgres and Redis initially. This keeps the setup honest and avoids fake integrations.
+- JWT-style auth in Milestone 1 is intentionally simple. It provides identifiable request context without committing to an enterprise identity provider too early.
 - The database model will start broad but shallow. Later phases can add columns and indexes based on actual guardrail, RAG, and red-team workflows.
 - The frontend shell will show product structure before all pages have real data. Empty states must be explicit, and no security metrics may be hard-coded.
 
 ## Definition Of Done
 
-Phase 1 is complete when:
+Milestone 1 is complete when:
 
 - `docker compose up` starts the local stack.
 - Backend health/readiness endpoints work.
@@ -186,3 +186,13 @@ Phase 1 is complete when:
 - Authentication and tenant context are enforced on protected endpoints.
 - README explains local setup, architecture, current limitations, and the phased roadmap.
 - CI checks are present for backend and frontend.
+
+## Reduced Delivery Roadmap
+
+The original 11-step roadmap is compressed into five milestones:
+
+1. Foundation: monorepo, local infrastructure, backend identity, persistence, first frontend shell, CI basics.
+2. Secure Demo App: LLM provider abstraction, vulnerable Enterprise Support Agent, Qdrant-backed RAG, mock tools, runtime guardrails, policy evaluation, context firewall, tool authorization, and audit logs.
+3. Red-Team Evaluation: attack taxonomy, generator, mutator, campaigns, traces, evaluator, findings, metrics, scoring, deterministic demo scenarios, and benchmark mode.
+4. Observability Dashboard: OpenTelemetry spans, Prometheus metrics, Grafana dashboards, event streaming, dashboard pages, attack explorer, findings, policies, traces, and visual attack paths.
+5. CI/CD Polish: security gate workflow, regression suites, threshold enforcement, final README/demo story, seed data, performance tuning, and UX polish.
